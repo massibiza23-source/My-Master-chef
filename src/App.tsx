@@ -55,7 +55,6 @@ export default function App() {
   });
   const [showSaveFeedback, setShowSaveFeedback] = useState<'saved' | 'already' | null>(null);
   const [loading, setLoading] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Consultando al Chef IA...');
   const [step, setStep] = useState<'ingredients' | 'profile' | 'recipe' | 'saved'>('ingredients');
@@ -133,26 +132,6 @@ export default function App() {
 
   const removeIngredient = (ing: string) => {
     setIngredients(ingredients.filter(i => i !== ing));
-  };
-
-  const handleManualImageGenerate = async () => {
-    if (!recipe || generatingImage) return;
-    
-    setGeneratingImage(true);
-    try {
-      const imageUrl = await generateRecipeImage(recipe.name, recipe.ingredients.map(i => i.item));
-      if (imageUrl) {
-        setRecipe(prev => prev ? { ...prev, imageUrl } : null);
-      } else {
-        // If it returns undefined, it might be the API key issue
-        setError("No se pudo generar la imagen. Verifica tu configuración de API en Vercel.");
-        setTimeout(() => setError(null), 5000);
-      }
-    } catch (err) {
-      console.error("Manual image generation failed:", err);
-    } finally {
-      setGeneratingImage(false);
-    }
   };
 
   const handleGenerate = async () => {
@@ -1043,53 +1022,18 @@ export default function App() {
                 <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image */}
                   {recipe.imageUrl ? (
-                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden group/hero">
+                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden">
                       <img 
                         src={recipe.imageUrl} 
                         alt={recipe.name} 
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
-                      <button 
-                        onClick={handleManualImageGenerate}
-                        disabled={generatingImage}
-                        className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-md text-white p-3 rounded-full opacity-0 group-hover/hero:opacity-100 transition-opacity hover:bg-white/40"
-                        title="Regenerar Imagen"
-                      >
-                        <RotateCcw size={20} className={cn(generatingImage && "animate-spin")} />
-                      </button>
                     </div>
                   ) : (
-                    <div className="bg-charcoal py-20 flex flex-col items-center justify-center space-y-6">
-                      <div className="w-24 h-24 bg-gold/10 rounded-full flex items-center justify-center text-gold relative">
-                        {generatingImage ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                            className="absolute inset-0 border-t-2 border-gold rounded-full"
-                          />
-                        ) : null}
+                    <div className="bg-charcoal pt-12 pb-4 flex justify-center">
+                      <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
                         <ChefHat size={40} />
-                      </div>
-                      <div className="text-center space-y-4">
-                        <p className="text-white/40 text-sm font-serif italic">El Chef aún no ha retratado este plato.</p>
-                        <button 
-                          onClick={handleManualImageGenerate}
-                          disabled={generatingImage}
-                          className="bg-gold text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-terracotta transition-all flex items-center gap-2 shadow-lg shadow-gold/20"
-                        >
-                          {generatingImage ? (
-                            <>
-                              <RotateCcw size={18} className="animate-spin" />
-                              Retratando...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles size={18} />
-                              Generar Foto del Plato
-                            </>
-                          )}
-                        </button>
                       </div>
                     </div>
                   )}
