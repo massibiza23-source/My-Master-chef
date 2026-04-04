@@ -1,0 +1,17 @@
+{
+  "name": "AI Flavor Engine",
+  "short_name": "FlavorEngine",
+  "description": "Sistema avanzado de IA culinaria para crear recetas únicas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFCFB",
+  "theme_color": "#C08C5D",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
