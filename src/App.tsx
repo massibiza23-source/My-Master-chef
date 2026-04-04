@@ -186,7 +186,7 @@ export default function App() {
       if (is403) {
         setError("Error de permisos (403). Por favor, verifica que tu clave API tenga acceso al modelo.");
       } else if (is429) {
-        setError("Límite de peticiones alcanzado (429). Por favor, espera un momento antes de intentarlo de nuevo.");
+        setError("Límite de cuota alcanzado (429). Si has esperado y el error persiste, es posible que hayas agotado tu cuota diaria gratuita de la API de Gemini.");
       } else if (isTimeout) {
         setError("La IA está tardando demasiado en responder. Por favor, inténtalo de nuevo.");
       } else if (isEmpty) {
