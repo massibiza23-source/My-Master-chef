@@ -95,18 +95,23 @@ export async function generateRecipeText(
 
 export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return undefined;
+  if (!apiKey) {
+    console.error("Image generation failed: GEMINI_API_KEY is missing in the environment.");
+    return undefined;
+  }
   const ai = new GoogleGenAI({ apiKey });
 
   try {
+    console.log(`Generating image for: ${recipeName}...`);
     const imageResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3.1-flash-image-preview",
       contents: `A professional, high-end culinary photograph of a dish named "${recipeName}". 
                  Style: Minimalist, elegant, gourmet presentation, soft natural lighting, 
                  warm tones, shallow depth of field. The dish features: ${ingredients.join(", ")}.`,
       config: {
         imageConfig: {
-          aspectRatio: "16:9"
+          aspectRatio: "16:9",
+          imageSize: "1K"
         }
       }
     });
@@ -114,12 +119,14 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
     if (imageResponse.candidates?.[0]?.content?.parts) {
       for (const part of imageResponse.candidates[0].content.parts) {
         if (part.inlineData) {
+          console.log("Image generated successfully.");
           return `data:image/png;base64,${part.inlineData.data}`;
         }
       }
     }
+    console.warn("Image generation returned no image data parts.");
   } catch (imageError) {
-    console.error("Error generating image:", imageError);
+    console.error("Error generating image with Gemini:", imageError);
   }
   return undefined;
 }
