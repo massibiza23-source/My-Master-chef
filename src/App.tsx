@@ -185,8 +185,11 @@ export default function App() {
       const is429 = message.includes('429') || errStr.includes('429');
       const isTimeout = message === "TIMEOUT";
       const isEmpty = message === "EMPTY_RESPONSE";
+      const isNoKey = message.includes("API Key not found") || errStr.includes("api key not found");
 
-      if (is403) {
+      if (isNoKey) {
+        setError("No se encontró la clave API de Gemini. Si estás en Vercel, asegúrate de haber configurado la variable de entorno GEMINI_API_KEY en el panel de control del proyecto.");
+      } else if (is403) {
         setError("Error de permisos (403). Por favor, verifica que tu clave API tenga acceso al modelo.");
       } else if (is429) {
         setError("Límite de cuota alcanzado (429). Si has esperado y el error persiste, es posible que hayas agotado tu cuota diaria gratuita de la API de Gemini.");
