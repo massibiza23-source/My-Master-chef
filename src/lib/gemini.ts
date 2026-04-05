@@ -6,21 +6,19 @@ export async function generateRecipeText(
   profile: UserProfile,
   previousRecipes: string[] = []
 ): Promise<Recipe> {
-  // Try multiple sources for the API key, prioritizing VITE_ for Vercel/Vite compatibility
-  let envApiKey = "";
+  // Safe API key retrieval
+  let apiKey = "";
   try {
-    // Safety check for process.env in browser environments
-    if (typeof process !== 'undefined' && process.env) {
-      envApiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY || "";
+    apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || "";
+    if (!apiKey && typeof process !== 'undefined') {
+      apiKey = process.env?.GEMINI_API_KEY || (process.env as any)?.API_KEY || "";
     }
   } catch (e) {
     // process might not be defined
   }
 
-  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || envApiKey;
-                 
   if (!apiKey) {
-    throw new Error("API Key not found");
+    throw new Error("API Key not found. Por favor, pulsa el botón 'Tokens / API' arriba a la derecha.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -59,11 +57,10 @@ export async function generateRecipeText(
   const executeRequest = async (): Promise<Recipe> => {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite-preview", // Usando versión lite para mayor disponibilidad
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
           systemInstruction: "Eres un Chef Ejecutivo de alta cocina. Tu objetivo es crear recetas innovadoras y equilibradas. Sé profesional, claro y eficiente en tus explicaciones.",
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           responseMimeType: "application/json",
           maxOutputTokens: 2048,
           responseSchema: {
@@ -144,25 +141,22 @@ export async function generateRecipeText(
 }
 
 export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
-  // Try multiple sources for the API key, prioritizing VITE_ for Vercel/Vite compatibility
-  let envApiKey = "";
+  // Safe API key retrieval
+  let apiKey = "";
   try {
-    // Safety check for process.env in browser environments
-    if (typeof process !== 'undefined' && process.env) {
-      envApiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY || "";
+    apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || "";
+    if (!apiKey && typeof process !== 'undefined') {
+      apiKey = process.env?.GEMINI_API_KEY || (process.env as any)?.API_KEY || "";
     }
   } catch (e) {
-    console.warn("[Chef IA] No se pudo acceder a process.env");
+    // process might not be defined
   }
-
-  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || envApiKey;
                  
   if (!apiKey) {
-    console.error("[Chef IA] No se encontró API Key. Asegúrate de configurar VITE_GEMINI_API_KEY en Vercel o usar el botón 'Tokens / API'.");
+    console.error("[Chef IA] No se encontró API Key.");
     return undefined;
   }
   
-  console.log("[Chef IA] API Key detectada, procediendo con la generación...");
   const ai = new GoogleGenAI({ apiKey });
 
   const maxRetries = 2;

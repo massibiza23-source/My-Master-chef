@@ -78,16 +78,17 @@ export default function App() {
   // Check for API key selection
   useEffect(() => {
     const checkApiKey = async () => {
-      if (window.aistudio?.hasSelectedApiKey) {
-        const selected = await window.aistudio.hasSelectedApiKey();
-        console.log("[Chef IA] API Key seleccionada en AI Studio:", selected);
-        setHasApiKey(selected);
-      } else {
-        // Check if environment key exists
-        const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-                       (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY);
-        console.log("[Chef IA] API Key en entorno detectada:", !!envKey);
-        setHasApiKey(!!envKey);
+      try {
+        if (window.aistudio?.hasSelectedApiKey) {
+          const selected = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(selected);
+        } else {
+          const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                         (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null);
+          setHasApiKey(!!envKey);
+        }
+      } catch (e) {
+        console.warn("[Chef IA] Error checking API key:", e);
       }
     };
     checkApiKey();
@@ -233,8 +234,10 @@ export default function App() {
         setError("La IA está tardando demasiado en responder. Por favor, inténtalo de nuevo.");
       } else if (isEmpty) {
         setError("El Chef IA devolvió una respuesta vacía. Por favor, inténtalo de nuevo con otros ingredientes.");
+      } else if (message.includes("API Key not found")) {
+        setError("No se ha encontrado una clave API. Por favor, pulsa el botón 'Tokens / API' arriba a la derecha para configurarla.");
       } else {
-        setError("No pudimos contactar con el Chef. Por favor, inténtalo de nuevo.");
+        setError(message || "No pudimos contactar con el Chef. Por favor, inténtalo de nuevo.");
       }
       setLoading(false);
     }
