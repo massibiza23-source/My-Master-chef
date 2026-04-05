@@ -9,8 +9,8 @@ import {
   Leaf, 
   Clock, 
   Utensils,
-  Globe,
   Soup,
+  Globe,
   ArrowRight,
   Info,
   ShoppingCart,
@@ -602,9 +602,9 @@ export default function App() {
       category: 'Despensa', 
       items: ['Arroz', 'Pasta', 'Harina', 'Miel', 'Aceite de Oliva', 'Vinagre', 'Salsa de Soja', 'Leche de Coco'] 
     },
-    {
-      category: 'Caldos y Bases',
-      items: ['Caldo de Pollo', 'Caldo de Verduras', 'Miso', 'Nata', 'Vino Blanco', 'Tomate Triturado']
+    { 
+      category: 'Caldos y Bases', 
+      items: ['Caldo de Pollo', 'Caldo de Verduras', 'Miso', 'Dashi', 'Vino Blanco', 'Crema de Leche', 'Tomate Triturado'] 
     }
   ];
 
@@ -895,7 +895,7 @@ export default function App() {
                       <Utensils size={20} className="text-gold" />
                       Tipo de Comida
                     </h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       {mealTypes.map((type) => (
                         <button
                           key={type.id}
