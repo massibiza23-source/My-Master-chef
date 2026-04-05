@@ -6,7 +6,9 @@ export async function generateRecipeText(
   profile: UserProfile,
   previousRecipes: string[] = []
 ): Promise<Recipe> {
-  const apiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || 
+                 (process.env as any).API_KEY || 
+                 (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("API Key not found");
   }
@@ -132,7 +134,9 @@ export async function generateRecipeText(
 }
 
 export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
-  const apiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || 
+                 (process.env as any).API_KEY || 
+                 (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!apiKey) return undefined;
   const ai = new GoogleGenAI({ apiKey });
 

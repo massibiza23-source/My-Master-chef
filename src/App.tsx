@@ -197,13 +197,15 @@ export default function App() {
       setLoading(false); // Show text immediately
       
       // Load image in background (don't block the UI for this)
+      setImageLoading(true);
       generateRecipeImage(result.name, result.ingredients.map(i => i.item))
         .then(imageUrl => {
           if (imageUrl) {
             setRecipe(prev => prev ? { ...prev, imageUrl } : null);
           }
         })
-        .catch(err => console.error("Background image generation failed:", err));
+        .catch(err => console.error("Background image generation failed:", err))
+        .finally(() => setImageLoading(false));
 
     } catch (err: any) {
       console.error("Error generating recipe:", err);
@@ -1124,22 +1126,32 @@ export default function App() {
                 <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image */}
                   <div className="relative group">
-                    {recipe.imageUrl ? (
-                      <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden">
-                        <img 
-                          key={recipe.imageUrl}
-                          src={recipe.imageUrl} 
-                          alt={recipe.name} 
-                          onError={() => {
-                            console.error("Image failed to load, clearing URL");
-                            setRecipe(prev => prev ? { ...prev, imageUrl: undefined } : null);
-                          }}
-                          className={cn(
-                            "w-full h-full object-cover transition-opacity duration-500",
-                            imageLoading ? "opacity-40" : "opacity-100"
-                          )}
-                          referrerPolicy="no-referrer"
-                        />
+                    {recipe.imageUrl || imageLoading ? (
+                      <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden bg-charcoal">
+                        {imageLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <div className="flex flex-col items-center gap-4">
+                              <RotateCcw size={40} className="text-gold animate-spin" />
+                              <p className="text-gold/60 text-[10px] uppercase tracking-widest font-bold">Capturando Esencia...</p>
+                            </div>
+                          </div>
+                        )}
+                        {recipe.imageUrl && (
+                          <img 
+                            key={recipe.imageUrl}
+                            src={recipe.imageUrl} 
+                            alt={recipe.name} 
+                            onError={() => {
+                              console.error("Image failed to load, clearing URL");
+                              setRecipe(prev => prev ? { ...prev, imageUrl: undefined } : null);
+                            }}
+                            className={cn(
+                              "w-full h-full object-cover transition-opacity duration-500",
+                              imageLoading ? "opacity-40" : "opacity-100"
+                            )}
+                            referrerPolicy="no-referrer"
+                          />
+                        )}
                       </div>
                     ) : (
                       <div className="bg-charcoal pt-12 pb-12 flex flex-col items-center justify-center space-y-4">
