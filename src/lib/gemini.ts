@@ -6,7 +6,7 @@ export async function generateRecipeText(
   profile: UserProfile,
   previousRecipes: string[] = []
 ): Promise<Recipe> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY;
   if (!apiKey) {
     throw new Error("API Key not found");
   }
@@ -132,7 +132,7 @@ export async function generateRecipeText(
 }
 
 export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY;
   if (!apiKey) return undefined;
   const ai = new GoogleGenAI({ apiKey });
 
@@ -141,7 +141,7 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
   const executeImageRequest = async (): Promise<string | undefined> => {
     try {
-      // Usamos la estructura de partes recomendada para modelos nano banana
+      console.log(`Generating image for: ${recipeName}...`);
       const imageResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents: {
@@ -162,27 +162,34 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
       if (imageResponse.candidates?.[0]?.content?.parts) {
         for (const part of imageResponse.candidates[0].content.parts) {
-          if (part.inlineData) {
-            return `data:image/png;base64,${part.inlineData.data}`;
+          if (part.inlineData?.data) {
+            const mimeType = part.inlineData.mimeType || "image/png";
+            const base64Data = part.inlineData.data.replace(/\s/g, ""); // Clean any whitespace
+            return `data:${mimeType};base64,${base64Data}`;
           }
         }
       }
       
-      // Si no hay imagen en la respuesta, lanzamos error para intentar reintento o fallback
       throw new Error("No image data in response");
 
     } catch (imageError: any) {
+      console.error("Primary image generation failed:", imageError);
       const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
+      const isPermissionDenied = imageError?.message?.includes("permission") || String(imageError).includes("permission");
       
+      if (isPermissionDenied) {
+        console.warn("Permission denied for image generation. Recommending API key selection.");
+        // We return undefined but the UI might show the key selection button
+      }
+
       if (is429 && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000;
-        console.log(`Retrying image after 429 error (attempt ${retryCount})... waiting ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeImageRequest();
       }
 
-      // Fallback a Imagen 4.0 si el modelo flash-image falla por otras razones
+      // Fallback a Imagen 4.0
       try {
         console.log("Attempting fallback to Imagen 4.0...");
         const imagenResponse = await ai.models.generateImages({
@@ -196,13 +203,12 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
         });
 
         if (imagenResponse.generatedImages?.[0]?.image?.imageBytes) {
-          return `data:image/jpeg;base64,${imagenResponse.generatedImages[0].image.imageBytes}`;
+          const base64Data = imagenResponse.generatedImages[0].image.imageBytes.replace(/\s/g, "");
+          return `data:image/jpeg;base64,${base64Data}`;
         }
       } catch (fallbackError) {
         console.error("Fallback image generation also failed:", fallbackError);
       }
-
-      console.error("Error generating image:", imageError);
     }
     return undefined;
   };
