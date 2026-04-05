@@ -152,7 +152,7 @@ export default function App() {
 
     try {
       const result = await Promise.race([
-        generateRecipeText(ingredients, profile),
+        generateRecipeText(ingredients, profile, savedRecipes.map(r => r.name)),
         timeoutPromise
       ]) as Recipe;
 
@@ -251,6 +251,13 @@ export default function App() {
         <ol>
             ${r.steps.map(s => `<li>${s}</li>`).join('')}
         </ol>
+        
+        ${r.tricks && r.tricks.length > 0 ? `
+        <div class="section-title">Trucos</div>
+        <ul>
+            ${r.tricks.map(t => `<li>${t}</li>`).join('')}
+        </ul>
+        ` : ''}
         
         <div class="section-title">Consejo del Chef</div>
         <p>${r.chefTip}</p>
@@ -447,6 +454,10 @@ export default function App() {
         <div class="hero-text ${!r.imageUrl ? 'no-image' : ''}">
             <span class="tag">Creación Exclusiva</span>
             <h1>${r.name}</h1>
+            <div style="display:flex; justify-content:center; gap:20px; margin-bottom:20px; font-size:12px; font-weight:bold; color:var(--gold); text-transform:uppercase; letter-spacing:0.1em;">
+                <span>⏱️ ${r.prepTime}</span>
+                <span>🔥 ${r.nutrition.calories}</span>
+            </div>
             <p class="history">"${r.history}"</p>
         </div>
         <div class="content">
@@ -483,6 +494,14 @@ export default function App() {
                     <div class="tip-box">
                         <strong style="color:var(--gold); display:block; margin-bottom:10px; font-style:normal;">Consejo del Chef</strong>
                         ${r.chefTip}
+                        
+                        ${r.tricks && r.tricks.length > 0 ? `
+                        <hr style="border:0; border-top:1px solid rgba(192, 140, 93, 0.1); margin:20px 0;">
+                        <strong style="color:var(--gold); display:block; margin-bottom:10px; font-style:normal;">Trucos Maestros</strong>
+                        <ul style="padding-left:15px; margin:0;">
+                            ${r.tricks.map(t => `<li>${t}</li>`).join('')}
+                        </ul>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -518,6 +537,8 @@ export default function App() {
     
     let text = `🌟 *${r.name.toUpperCase()}* 🌟\n`;
     text += `_"${r.history}"_\n\n`;
+    text += `⏱️ *Tiempo:* ${r.prepTime}\n`;
+    text += `🔥 *Calorías:* ${r.nutrition.calories}\n\n`;
     
     if (r.courses && r.courses.length > 0) {
       text += `🍽️ *MENÚ DEGUSTACIÓN*\n`;
@@ -528,6 +549,12 @@ export default function App() {
         text += `_${c.description}_\n\n`;
       });
       text += `━━━━━━━━━━━━━━━━━━\n\n`;
+    }
+
+    if (r.tricks && r.tricks.length > 0) {
+      text += `💡 *TRUCOS MAESTROS:*\n`;
+      r.tricks.forEach(t => text += `• ${t}\n`);
+      text += `\n`;
     }
 
     text += `👨‍🍳 *PREPARACIÓN Y DETALLES:*\n`;
@@ -1052,6 +1079,22 @@ export default function App() {
                         "text-4xl md:text-6xl font-serif mb-6",
                         recipe.imageUrl ? "text-charcoal" : "text-white"
                       )}>{recipe.name}</h2>
+                      <div className="flex justify-center items-center gap-6 mb-6">
+                        <div className={cn(
+                          "flex items-center gap-2 text-xs font-bold uppercase tracking-widest",
+                          recipe.imageUrl ? "text-gold" : "text-gold/80"
+                        )}>
+                          <Clock size={14} />
+                          {recipe.prepTime}
+                        </div>
+                        <div className={cn(
+                          "flex items-center gap-2 text-xs font-bold uppercase tracking-widest",
+                          recipe.imageUrl ? "text-gold" : "text-gold/80"
+                        )}>
+                          <Flame size={14} />
+                          {recipe.nutrition.calories}
+                        </div>
+                      </div>
                       <p className={cn(
                         "italic max-w-2xl mx-auto leading-relaxed",
                         recipe.imageUrl ? "text-charcoal/60" : "text-white/60"
@@ -1113,14 +1156,33 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="bg-gold/5 border-l-4 border-gold p-8 rounded-r-2xl space-y-3">
-                        <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
-                          <Sparkles size={18} />
-                          Consejo del Chef
-                        </h4>
-                        <p className="text-charcoal/70 italic text-sm leading-relaxed">
-                          {recipe.chefTip}
-                        </p>
+                      <div className="bg-gold/5 border-l-4 border-gold p-8 rounded-r-2xl space-y-6">
+                        <div className="space-y-3">
+                          <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
+                            <Sparkles size={18} />
+                            Consejo del Chef
+                          </h4>
+                          <p className="text-charcoal/70 italic text-sm leading-relaxed">
+                            {recipe.chefTip}
+                          </p>
+                        </div>
+                        
+                        {recipe.tricks && recipe.tricks.length > 0 && (
+                          <div className="space-y-3 pt-4 border-t border-gold/10">
+                            <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
+                              <Flame size={18} />
+                              Trucos Maestros
+                            </h4>
+                            <ul className="space-y-2">
+                              {recipe.tricks.map((trick, idx) => (
+                                <li key={idx} className="text-sm text-charcoal/70 flex gap-2">
+                                  <span className="text-gold">•</span>
+                                  {trick}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-4 pt-8">

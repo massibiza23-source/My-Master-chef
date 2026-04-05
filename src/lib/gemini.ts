@@ -3,7 +3,8 @@ import { Recipe, UserProfile } from "../types";
 
 export async function generateRecipeText(
   ingredients: string[],
-  profile: UserProfile
+  profile: UserProfile,
+  previousRecipes: string[] = []
 ): Promise<Recipe> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -13,23 +14,29 @@ export async function generateRecipeText(
   const ai = new GoogleGenAI({ apiKey });
   
   const prompt = `
-    Genera una receta única:
-    Ingredientes: ${ingredients.join(", ")}
-    Gustos: ${profile.likes.join(", ")}
+    Genera una receta única y creativa:
+    Ingredientes disponibles: ${ingredients.join(", ")}
+    Gustos del usuario: ${profile.likes.join(", ")}
     Evitar: ${profile.dislikes.join(", ")}
     Intolerancias: ${profile.intolerances.join(", ")}
     Objetivo: ${profile.goal}
-    Tipo: ${profile.mealType}
-    Fusión: ${profile.fusion || "Libre"}
+    Tipo de comida: ${profile.mealType}
+    Fusión cultural: ${profile.fusion || "Libre"}
     Idioma: ${profile.language}
+    
+    IMPORTANTE: No repitas ninguna de estas recetas que ya han sido generadas: ${previousRecipes.join(", ") || "Ninguna"}.
+    Busca una combinación de sabores diferente y un nombre original.
     
     JSON:
     {
-      "name": "Nombre corto",
+      "name": "Nombre corto y original",
       "history": "Inspiración (1 línea)",
+      "prepTime": "Tiempo total (ej: 45 min)",
+      "tricks": ["truco 1", "truco 2"],
       "courses": [{"title": "Entrante", "name": "Nombre", "description": "Breve"}],
       "ingredients": [{"item": "cantidad e ingrediente", "alternative": "opcional"}],
       "steps": ["paso corto 1"],
+      "nutrition": {"calories": "kcal", "protein": "g", "carbs": "g", "fat": "g"},
       "chefTip": "Consejo breve"
     }
   `;
@@ -52,6 +59,11 @@ export async function generateRecipeText(
             properties: {
               name: { type: Type.STRING },
               history: { type: Type.STRING },
+              prepTime: { type: Type.STRING },
+              tricks: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
               courses: {
                 type: Type.ARRAY,
                 items: {
@@ -79,9 +91,19 @@ export async function generateRecipeText(
                 type: Type.ARRAY,
                 items: { type: Type.STRING }
               },
+              nutrition: {
+                type: Type.OBJECT,
+                properties: {
+                  calories: { type: Type.STRING },
+                  protein: { type: Type.STRING },
+                  carbs: { type: Type.STRING },
+                  fat: { type: Type.STRING }
+                },
+                required: ["calories", "protein", "carbs", "fat"]
+              },
               chefTip: { type: Type.STRING }
             },
-            required: ["name", "history", "ingredients", "steps", "chefTip"]
+            required: ["name", "history", "prepTime", "tricks", "ingredients", "steps", "nutrition", "chefTip"]
           }
         }
       });
@@ -119,11 +141,18 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
   const executeImageRequest = async (): Promise<string | undefined> => {
     try {
+      // Usamos la estructura de partes recomendada para modelos nano banana
       const imageResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
-        contents: `A professional, high-end culinary photograph of a dish named "${recipeName}". 
-                   Style: Minimalist, elegant, gourmet presentation, soft natural lighting, 
-                   warm tones, shallow depth of field. The dish features: ${ingredients.join(", ")}.`,
+        contents: {
+          parts: [
+            {
+              text: `A professional, high-end culinary photograph of a dish named "${recipeName}". 
+                     Style: Minimalist, elegant, gourmet presentation, soft natural lighting, 
+                     warm tones, shallow depth of field. The dish features: ${ingredients.join(", ")}.`
+            }
+          ]
+        },
         config: {
           imageConfig: {
             aspectRatio: "16:9"
@@ -138,8 +167,13 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
           }
         }
       }
+      
+      // Si no hay imagen en la respuesta, lanzamos error para intentar reintento o fallback
+      throw new Error("No image data in response");
+
     } catch (imageError: any) {
       const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
+      
       if (is429 && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000;
@@ -147,6 +181,27 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeImageRequest();
       }
+
+      // Fallback a Imagen 4.0 si el modelo flash-image falla por otras razones
+      try {
+        console.log("Attempting fallback to Imagen 4.0...");
+        const imagenResponse = await ai.models.generateImages({
+          model: 'imagen-4.0-generate-001',
+          prompt: `A professional, high-end culinary photograph of a dish named "${recipeName}" with ${ingredients.join(", ")}. Gourmet presentation.`,
+          config: {
+            numberOfImages: 1,
+            outputMimeType: 'image/jpeg',
+            aspectRatio: '16:9',
+          },
+        });
+
+        if (imagenResponse.generatedImages?.[0]?.image?.imageBytes) {
+          return `data:image/jpeg;base64,${imagenResponse.generatedImages[0].image.imageBytes}`;
+        }
+      } catch (fallbackError) {
+        console.error("Fallback image generation also failed:", fallbackError);
+      }
+
       console.error("Error generating image:", imageError);
     }
     return undefined;

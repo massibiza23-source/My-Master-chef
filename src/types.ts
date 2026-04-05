@@ -23,6 +23,8 @@ export interface Recipe {
     carbs: string;
     fat: string;
   };
+  prepTime: string;
+  tricks: string[];
   chefTip: string;
   imageUrl?: string;
   courses?: Course[];
