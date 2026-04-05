@@ -6,9 +6,19 @@ export async function generateRecipeText(
   profile: UserProfile,
   previousRecipes: string[] = []
 ): Promise<Recipe> {
-  const apiKey = process.env.GEMINI_API_KEY || 
-                 (process.env as any).API_KEY || 
-                 (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  // Try multiple sources for the API key, prioritizing VITE_ for Vercel/Vite compatibility
+  let envApiKey = "";
+  try {
+    // Safety check for process.env in browser environments
+    if (typeof process !== 'undefined' && process.env) {
+      envApiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY || "";
+    }
+  } catch (e) {
+    // process might not be defined
+  }
+
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || envApiKey;
+                 
   if (!apiKey) {
     throw new Error("API Key not found");
   }
@@ -134,10 +144,25 @@ export async function generateRecipeText(
 }
 
 export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
-  const apiKey = process.env.GEMINI_API_KEY || 
-                 (process.env as any).API_KEY || 
-                 (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (!apiKey) return undefined;
+  // Try multiple sources for the API key, prioritizing VITE_ for Vercel/Vite compatibility
+  let envApiKey = "";
+  try {
+    // Safety check for process.env in browser environments
+    if (typeof process !== 'undefined' && process.env) {
+      envApiKey = process.env.GEMINI_API_KEY || (process.env as any).API_KEY || "";
+    }
+  } catch (e) {
+    console.warn("[Chef IA] No se pudo acceder a process.env");
+  }
+
+  const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || envApiKey;
+                 
+  if (!apiKey) {
+    console.error("[Chef IA] No se encontró API Key. Asegúrate de configurar VITE_GEMINI_API_KEY en Vercel o usar el botón 'Tokens / API'.");
+    return undefined;
+  }
+  
+  console.log("[Chef IA] API Key detectada, procediendo con la generación...");
   const ai = new GoogleGenAI({ apiKey });
 
   const maxRetries = 2;
@@ -145,7 +170,9 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
   const executeImageRequest = async (): Promise<string | undefined> => {
     try {
-      console.log(`Generating image for: ${recipeName}...`);
+      console.log(`[Chef IA] Iniciando generación de imagen para: ${recipeName}...`);
+      
+      // Intentar primero con gemini-2.5-flash-image
       const imageResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents: {
@@ -167,8 +194,9 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
       if (imageResponse.candidates?.[0]?.content?.parts) {
         for (const part of imageResponse.candidates[0].content.parts) {
           if (part.inlineData?.data) {
+            console.log("[Chef IA] Imagen generada con éxito (Gemini 2.5)");
             const mimeType = part.inlineData.mimeType || "image/png";
-            const base64Data = part.inlineData.data.replace(/\s/g, ""); // Clean any whitespace
+            const base64Data = part.inlineData.data.replace(/\s/g, ""); 
             return `data:${mimeType};base64,${base64Data}`;
           }
         }
@@ -177,25 +205,27 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
       throw new Error("No image data in response");
 
     } catch (imageError: any) {
-      console.error("Primary image generation failed:", imageError);
-      const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
-      const isPermissionDenied = imageError?.message?.includes("permission") || String(imageError).includes("permission");
+      console.error("[Chef IA] Error en generación primaria:", imageError);
+      
+      const errorStr = String(imageError).toLowerCase();
+      const is429 = errorStr.includes("429");
+      const isPermissionDenied = errorStr.includes("permission") || errorStr.includes("403");
       
       if (isPermissionDenied) {
-        console.warn("Permission denied for image generation. Recommending API key selection.");
-        // We return undefined but the UI might show the key selection button
+        console.warn("[Chef IA] Permiso denegado. Asegúrate de que tu API Key tenga habilitado el modelo Gemini 2.5 Flash Image.");
       }
 
       if (is429 && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000;
+        console.log(`[Chef IA] Quota excedida, reintentando en ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeImageRequest();
       }
 
-      // Fallback a Imagen 4.0
+      // Fallback a Imagen 4.0 (A veces tiene cuotas diferentes)
       try {
-        console.log("Attempting fallback to Imagen 4.0...");
+        console.log("[Chef IA] Intentando fallback con Imagen 4.0...");
         const imagenResponse = await ai.models.generateImages({
           model: 'imagen-4.0-generate-001',
           prompt: `A professional, high-end culinary photograph of a dish named "${recipeName}" with ${ingredients.join(", ")}. Gourmet presentation.`,
@@ -207,11 +237,12 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
         });
 
         if (imagenResponse.generatedImages?.[0]?.image?.imageBytes) {
+          console.log("[Chef IA] Imagen generada con éxito (Imagen 4.0)");
           const base64Data = imagenResponse.generatedImages[0].image.imageBytes.replace(/\s/g, "");
           return `data:image/jpeg;base64,${base64Data}`;
         }
       } catch (fallbackError) {
-        console.error("Fallback image generation also failed:", fallbackError);
+        console.error("[Chef IA] Fallback también falló:", fallbackError);
       }
     }
     return undefined;

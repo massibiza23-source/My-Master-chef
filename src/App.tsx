@@ -80,7 +80,14 @@ export default function App() {
     const checkApiKey = async () => {
       if (window.aistudio?.hasSelectedApiKey) {
         const selected = await window.aistudio.hasSelectedApiKey();
+        console.log("[Chef IA] API Key seleccionada en AI Studio:", selected);
         setHasApiKey(selected);
+      } else {
+        // Check if environment key exists
+        const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                       (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY);
+        console.log("[Chef IA] API Key en entorno detectada:", !!envKey);
+        setHasApiKey(!!envKey);
       }
     };
     checkApiKey();
@@ -1154,11 +1161,19 @@ export default function App() {
                         )}
                       </div>
                     ) : (
-                      <div className="bg-charcoal pt-12 pb-12 flex flex-col items-center justify-center space-y-4">
+                      <div className="bg-charcoal pt-20 pb-20 flex flex-col items-center justify-center space-y-6">
                         <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
                           <ChefHat size={40} />
                         </div>
-                        <p className="text-gold/40 text-xs uppercase tracking-widest font-bold">Sin imagen del plato</p>
+                        <div className="text-center space-y-2">
+                          <p className="text-gold/40 text-xs uppercase tracking-widest font-bold">Sin imagen del plato</p>
+                          <button 
+                            onClick={regenerateImage}
+                            className="text-gold hover:text-white transition-colors text-xs underline underline-offset-4"
+                          >
+                            Intentar generar de nuevo
+                          </button>
+                        </div>
                       </div>
                     )}
                     
