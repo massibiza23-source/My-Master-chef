@@ -21,7 +21,8 @@ import {
   Download,
   ArrowUpAZ,
   ArrowDownAZ,
-  Search
+  Search,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { generateRecipeText, generateRecipeImage } from './lib/gemini';
@@ -55,11 +56,13 @@ export default function App() {
   });
   const [showSaveFeedback, setShowSaveFeedback] = useState<'saved' | 'already' | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Consultando al Chef IA...');
   const [step, setStep] = useState<'ingredients' | 'profile' | 'recipe' | 'saved'>('ingredients');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
+  const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
 
   // Handle URL share
   useEffect(() => {
@@ -577,6 +580,33 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const regenerateImage = async () => {
+    if (!recipe) return;
+    
+    setImageLoading(true);
+    try {
+      const imageUrl = await generateRecipeImage(
+        recipe.name, 
+        recipe.ingredients.map(i => i.item)
+      );
+      const updatedRecipe = { ...recipe, imageUrl };
+      setRecipe(updatedRecipe);
+      
+      // Update in saved recipes if it exists
+      if (savedRecipes.some(r => r.name === recipe.name)) {
+        const newSaved = savedRecipes.map(r => 
+          r.name === recipe.name ? updatedRecipe : r
+        );
+        setSavedRecipes(newSaved);
+        localStorage.setItem('savedRecipes', JSON.stringify(newSaved));
+      }
+    } catch (err) {
+      console.error("Error regenerating image:", err);
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
   const reset = () => {
     setRecipe(null);
     setStep('ingredients');
@@ -1048,22 +1078,52 @@ export default function App() {
               ) : recipe ? (
                 <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image */}
-                  {recipe.imageUrl ? (
-                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden">
-                      <img 
-                        src={recipe.imageUrl} 
-                        alt={recipe.name} 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  ) : (
-                    <div className="bg-charcoal pt-12 pb-4 flex justify-center">
-                      <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
-                        <ChefHat size={40} />
+                  <div className="relative group">
+                    {recipe.imageUrl ? (
+                      <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden">
+                        <img 
+                          src={recipe.imageUrl} 
+                          alt={recipe.name} 
+                          className={cn(
+                            "w-full h-full object-cover transition-opacity duration-500",
+                            imageLoading ? "opacity-40" : "opacity-100"
+                          )}
+                          referrerPolicy="no-referrer"
+                        />
                       </div>
+                    ) : (
+                      <div className="bg-charcoal pt-12 pb-12 flex flex-col items-center justify-center space-y-4">
+                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
+                          <ChefHat size={40} />
+                        </div>
+                        <p className="text-gold/40 text-xs uppercase tracking-widest font-bold">Sin imagen del plato</p>
+                      </div>
+                    )}
+                    
+                    {/* Regenerate Image Overlay Button */}
+                    <div className={cn(
+                      "absolute inset-0 flex items-center justify-center bg-charcoal/40 backdrop-blur-[2px] transition-opacity duration-300",
+                      imageLoading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )}>
+                      <button
+                        onClick={regenerateImage}
+                        disabled={imageLoading}
+                        className="bg-white/90 text-charcoal px-6 py-3 rounded-full text-sm font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-gold hover:text-white transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {imageLoading ? (
+                          <>
+                            <RotateCcw size={16} className="animate-spin" />
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon size={16} />
+                            {recipe.imageUrl ? "Cambiar Imagen" : "Generar Imagen"}
+                          </>
+                        )}
+                      </button>
                     </div>
-                  )}
+                  </div>
 
                   {/* Recipe Title & Intro */}
                   <div className={cn(
@@ -1267,11 +1327,20 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-12"
             >
-              <div className="text-center space-y-4">
-                <h2 className="text-4xl font-serif text-charcoal">Mi <span className="text-gold">Recetario</span></h2>
-                <p className="text-charcoal/60">Tu colección personal de creaciones culinarias.</p>
-                
-                {savedRecipes.length > 0 && (
+              <div className="flex flex-col items-center space-y-8">
+                <button 
+                  onClick={() => setStep('ingredients')}
+                  className="text-charcoal/40 hover:text-gold transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
+                >
+                  <RotateCcw size={14} />
+                  Volver al Generador
+                </button>
+
+                <div className="text-center space-y-4">
+                  <h2 className="text-4xl font-serif text-charcoal">Mi <span className="text-gold">Recetario</span></h2>
+                  <p className="text-charcoal/60">Tu colección personal de creaciones culinarias.</p>
+                  
+                  {savedRecipes.length > 0 && (
                   <div className="max-w-md mx-auto space-y-4 pt-4">
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gold/40" size={18} />
@@ -1320,8 +1389,9 @@ export default function App() {
                   </div>
                 )}
               </div>
+            </div>
 
-              {savedRecipes.length === 0 ? (
+            {savedRecipes.length === 0 ? (
                 <div className="text-center py-20 border-2 border-dashed border-gold/20 rounded-[2rem] space-y-6">
                   <Bookmark size={48} className="mx-auto text-gold/20" />
                   <p className="text-charcoal/40 font-serif italic text-xl">Aún no has guardado ninguna receta.</p>
@@ -1397,7 +1467,7 @@ export default function App() {
                             </button>
                           </div>
                           <button 
-                            onClick={() => deleteRecipe(r.name)}
+                            onClick={() => setRecipeToDelete(r.name)}
                             className="text-terracotta/40 hover:text-terracotta transition-colors"
                           >
                             <Trash2 size={18} />
@@ -1408,6 +1478,52 @@ export default function App() {
                   })()}
                 </div>
               )}
+
+              {/* Delete Confirmation Modal */}
+              <AnimatePresence>
+                {recipeToDelete && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-charcoal/60 backdrop-blur-sm"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl space-y-6 border border-gold/10"
+                    >
+                      <div className="w-16 h-16 bg-terracotta/10 rounded-full flex items-center justify-center text-terracotta mx-auto">
+                        <Trash2 size={32} />
+                      </div>
+                      <div className="text-center space-y-2">
+                        <h3 className="text-xl font-serif text-charcoal">¿Eliminar receta?</h3>
+                        <p className="text-sm text-charcoal/60">
+                          Estás a punto de eliminar <span className="font-bold text-charcoal">"{recipeToDelete}"</span>. Esta acción no se puede deshacer.
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <button
+                          onClick={() => {
+                            deleteRecipe(recipeToDelete);
+                            setRecipeToDelete(null);
+                          }}
+                          className="w-full bg-terracotta text-white py-3 rounded-full text-sm font-medium hover:bg-red-700 transition-all"
+                        >
+                          Eliminar Permanentemente
+                        </button>
+                        <button
+                          onClick={() => setRecipeToDelete(null)}
+                          className="w-full bg-charcoal/5 text-charcoal/60 py-3 rounded-full text-sm font-medium hover:bg-charcoal/10 transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
