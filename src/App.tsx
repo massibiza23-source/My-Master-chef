@@ -10,6 +10,7 @@ import {
   Clock, 
   Utensils,
   Globe,
+  Soup,
   ArrowRight,
   Info,
   ShoppingCart,
@@ -112,6 +113,7 @@ export default function App() {
     { id: 'single', label: 'Plato Único', icon: Utensils },
     { id: 'lunch', label: 'Almuerzo', icon: Clock },
     { id: 'dinner', label: 'Cena', icon: Flame },
+    { id: 'soup', label: 'Sopa', icon: Soup },
   ] as const;
 
   // Load saved recipes from localStorage (Already handled in useState initializer)
@@ -599,6 +601,10 @@ export default function App() {
     { 
       category: 'Despensa', 
       items: ['Arroz', 'Pasta', 'Harina', 'Miel', 'Aceite de Oliva', 'Vinagre', 'Salsa de Soja', 'Leche de Coco'] 
+    },
+    {
+      category: 'Caldos y Bases',
+      items: ['Caldo de Pollo', 'Caldo de Verduras', 'Miso', 'Nata', 'Vino Blanco', 'Tomate Triturado']
     }
   ];
 
