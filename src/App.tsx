@@ -21,22 +21,11 @@ import {
   Download,
   ArrowUpAZ,
   ArrowDownAZ,
-  Search,
-  Image as ImageIcon,
-  Soup
+  Search
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { generateRecipeText, generateRecipeImage } from './lib/gemini';
 import { Recipe, UserProfile } from './types';
-
-declare global {
-  interface Window {
-    aistudio: {
-      hasSelectedApiKey: () => Promise<boolean>;
-      openSelectKey: () => Promise<void>;
-    };
-  }
-}
 
 export default function App() {
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -66,40 +55,12 @@ export default function App() {
   });
   const [showSaveFeedback, setShowSaveFeedback] = useState<'saved' | 'already' | null>(null);
   const [loading, setLoading] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Consultando al Chef IA...');
   const [step, setStep] = useState<'ingredients' | 'profile' | 'recipe' | 'saved'>('ingredients');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState(true);
-
-  // Check for API key selection
-  useEffect(() => {
-    const checkApiKey = async () => {
-      try {
-        if (window.aistudio?.hasSelectedApiKey) {
-          const selected = await window.aistudio.hasSelectedApiKey();
-          setHasApiKey(selected);
-        } else {
-          const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-                         (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null);
-          setHasApiKey(!!envKey);
-        }
-      } catch (e) {
-        console.warn("[Chef IA] Error checking API key:", e);
-      }
-    };
-    checkApiKey();
-  }, []);
-
-  const openKeySelection = async () => {
-    if (window.aistudio?.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      setHasApiKey(true);
-    }
-  };
 
   // Handle URL share
   useEffect(() => {
@@ -151,7 +112,6 @@ export default function App() {
     { id: 'single', label: 'Plato Único', icon: Utensils },
     { id: 'lunch', label: 'Almuerzo', icon: Clock },
     { id: 'dinner', label: 'Cena', icon: Flame },
-    { id: 'soups', label: 'Sopas', icon: Soup },
   ] as const;
 
   // Load saved recipes from localStorage (Already handled in useState initializer)
@@ -205,15 +165,13 @@ export default function App() {
       setLoading(false); // Show text immediately
       
       // Load image in background (don't block the UI for this)
-      setImageLoading(true);
       generateRecipeImage(result.name, result.ingredients.map(i => i.item))
         .then(imageUrl => {
           if (imageUrl) {
             setRecipe(prev => prev ? { ...prev, imageUrl } : null);
           }
         })
-        .catch(err => console.error("Background image generation failed:", err))
-        .finally(() => setImageLoading(false));
+        .catch(err => console.error("Background image generation failed:", err));
 
     } catch (err: any) {
       console.error("Error generating recipe:", err);
@@ -234,10 +192,8 @@ export default function App() {
         setError("La IA está tardando demasiado en responder. Por favor, inténtalo de nuevo.");
       } else if (isEmpty) {
         setError("El Chef IA devolvió una respuesta vacía. Por favor, inténtalo de nuevo con otros ingredientes.");
-      } else if (message.includes("API Key not found")) {
-        setError("No se ha encontrado una clave API. Por favor, pulsa el botón 'Tokens / API' arriba a la derecha para configurarla.");
       } else {
-        setError(message || "No pudimos contactar con el Chef. Por favor, inténtalo de nuevo.");
+        setError("No pudimos contactar con el Chef. Por favor, inténtalo de nuevo.");
       }
       setLoading(false);
     }
@@ -622,33 +578,6 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const regenerateImage = async () => {
-    if (!recipe) return;
-    
-    setImageLoading(true);
-    try {
-      const imageUrl = await generateRecipeImage(
-        recipe.name, 
-        recipe.ingredients.map(i => i.item)
-      );
-      const updatedRecipe = { ...recipe, imageUrl };
-      setRecipe(updatedRecipe);
-      
-      // Update in saved recipes if it exists
-      if (savedRecipes.some(r => r.name === recipe.name)) {
-        const newSaved = savedRecipes.map(r => 
-          r.name === recipe.name ? updatedRecipe : r
-        );
-        setSavedRecipes(newSaved);
-        localStorage.setItem('savedRecipes', JSON.stringify(newSaved));
-      }
-    } catch (err) {
-      console.error("Error regenerating image:", err);
-    } finally {
-      setImageLoading(false);
-    }
-  };
-
   const reset = () => {
     setRecipe(null);
     setStep('ingredients');
@@ -670,10 +599,6 @@ export default function App() {
     { 
       category: 'Despensa', 
       items: ['Arroz', 'Pasta', 'Harina', 'Miel', 'Aceite de Oliva', 'Vinagre', 'Salsa de Soja', 'Leche de Coco'] 
-    },
-    {
-      category: 'Sopas y Caldos',
-      items: ['Caldo de Pollo', 'Caldo de Verduras', 'Miso', 'Nata', 'Fideos', 'Lentejas', 'Garbanzos', 'Cebada']
     }
   ];
 
@@ -706,17 +631,6 @@ export default function App() {
             ))}
           </select>
           <nav className="flex gap-4 md:gap-8 text-xs font-medium uppercase tracking-widest text-charcoal/60">
-            <button 
-              onClick={openKeySelection}
-              className={cn(
-                "flex items-center gap-2 transition-colors",
-                !hasApiKey ? "text-terracotta hover:text-red-600" : "hover:text-gold"
-              )}
-              title="Configurar Tokens / API Key para generación de fotos"
-            >
-              <Sparkles size={14} className={cn(!hasApiKey && "animate-pulse")} /> 
-              {hasApiKey ? "Tokens / API" : "Añadir Tokens"}
-            </button>
             {savedRecipes.length > 0 && (
               <button 
                 onClick={downloadAllAsHtml}
@@ -1135,82 +1049,22 @@ export default function App() {
               ) : recipe ? (
                 <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image */}
-                  <div className="relative group">
-                    {recipe.imageUrl || imageLoading ? (
-                      <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden bg-charcoal">
-                        {imageLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center z-10">
-                            <div className="flex flex-col items-center gap-4">
-                              <RotateCcw size={40} className="text-gold animate-spin" />
-                              <p className="text-gold/60 text-[10px] uppercase tracking-widest font-bold">Capturando Esencia...</p>
-                            </div>
-                          </div>
-                        )}
-                        {recipe.imageUrl && (
-                          <img 
-                            key={recipe.imageUrl}
-                            src={recipe.imageUrl} 
-                            alt={recipe.name} 
-                            onError={() => {
-                              console.error("Image failed to load, clearing URL");
-                              setRecipe(prev => prev ? { ...prev, imageUrl: undefined } : null);
-                            }}
-                            className={cn(
-                              "w-full h-full object-cover transition-opacity duration-500",
-                              imageLoading ? "opacity-40" : "opacity-100"
-                            )}
-                            referrerPolicy="no-referrer"
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-charcoal pt-20 pb-20 flex flex-col items-center justify-center space-y-6">
-                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
-                          <ChefHat size={40} />
-                        </div>
-                        <div className="text-center space-y-2">
-                          <p className="text-gold/40 text-xs uppercase tracking-widest font-bold">Sin imagen del plato</p>
-                          <button 
-                            onClick={regenerateImage}
-                            className="text-gold hover:text-white transition-colors text-xs underline underline-offset-4"
-                          >
-                            Intentar generar de nuevo
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Regenerate Image Overlay Button */}
-                    <div className={cn(
-                      "absolute inset-0 flex items-center justify-center bg-charcoal/40 backdrop-blur-[2px] transition-opacity duration-300",
-                      imageLoading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                    )}>
-                      <div className="flex flex-col items-center gap-4">
-                        <button
-                          onClick={regenerateImage}
-                          disabled={imageLoading}
-                          className="bg-white/90 text-charcoal px-6 py-3 rounded-full text-sm font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-gold hover:text-white transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {imageLoading ? (
-                            <>
-                              <RotateCcw size={16} className="animate-spin" />
-                              Generando...
-                            </>
-                          ) : (
-                            <>
-                              <ImageIcon size={16} />
-                              {recipe.imageUrl ? "Cambiar Imagen" : "Generar Imagen"}
-                            </>
-                          )}
-                        </button>
-                        {!hasApiKey && !recipe.imageUrl && !imageLoading && (
-                          <p className="text-white/60 text-[10px] uppercase tracking-widest text-center max-w-[200px]">
-                            Si falla, pulsa <span className="text-gold font-bold">"Configurar IA"</span> arriba para activar tu API Key
-                          </p>
-                        )}
+                  {recipe.imageUrl ? (
+                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden">
+                      <img 
+                        src={recipe.imageUrl} 
+                        alt={recipe.name} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-charcoal pt-12 pb-4 flex justify-center">
+                      <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
+                        <ChefHat size={40} />
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Recipe Title & Intro */}
                   <div className={cn(
@@ -1523,18 +1377,7 @@ export default function App() {
                       >
                         <div className="h-48 relative overflow-hidden">
                           {r.imageUrl ? (
-                            <img 
-                              src={r.imageUrl} 
-                              alt={r.name} 
-                              onError={() => {
-                                const newSaved = savedRecipes.map(item => 
-                                  item.name === r.name ? { ...item, imageUrl: undefined } : item
-                                );
-                                setSavedRecipes(newSaved);
-                                localStorage.setItem('savedRecipes', JSON.stringify(newSaved));
-                              }}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                            />
+                            <img src={r.imageUrl} alt={r.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full bg-charcoal flex items-center justify-center text-gold/20">
                               <ChefHat size={48} />

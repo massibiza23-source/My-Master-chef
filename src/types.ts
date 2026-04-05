@@ -37,5 +37,5 @@ export interface UserProfile {
   goal: 'healthy' | 'indulgent' | 'fast' | 'gourmet';
   fusion?: string;
   language: 'es' | 'en' | 'de' | 'it' | 'pt';
-  mealType: 'single' | 'lunch' | 'dinner' | 'soups';
+  mealType: 'single' | 'lunch' | 'dinner';
 }
