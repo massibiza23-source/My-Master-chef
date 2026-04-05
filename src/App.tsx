@@ -694,15 +694,17 @@ export default function App() {
             ))}
           </select>
           <nav className="flex gap-4 md:gap-8 text-xs font-medium uppercase tracking-widest text-charcoal/60">
-            {!hasApiKey && (
-              <button 
-                onClick={openKeySelection}
-                className="flex items-center gap-2 text-terracotta hover:text-red-600 transition-colors"
-                title="Configurar API Key para funciones avanzadas"
-              >
-                <Sparkles size={14} /> Configurar IA
-              </button>
-            )}
+            <button 
+              onClick={openKeySelection}
+              className={cn(
+                "flex items-center gap-2 transition-colors",
+                !hasApiKey ? "text-terracotta hover:text-red-600" : "hover:text-gold"
+              )}
+              title="Configurar Tokens / API Key para generación de fotos"
+            >
+              <Sparkles size={14} className={cn(!hasApiKey && "animate-pulse")} /> 
+              {hasApiKey ? "Tokens / API" : "Añadir Tokens"}
+            </button>
             {savedRecipes.length > 0 && (
               <button 
                 onClick={downloadAllAsHtml}
