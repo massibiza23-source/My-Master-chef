@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   ChefHat, 
   Plus, 
@@ -170,7 +169,7 @@ export default function App() {
       }
 
       setRecipe(result);
-      setLoading(false); // Show text immediately
+      setLoading(false);
     } catch (err: any) {
       console.error("Error generating recipe:", err);
       
@@ -1045,7 +1044,7 @@ export default function App() {
               className="space-y-12"
             >
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 space-y-8">
+                <div key="loading-view" className="flex flex-col items-center justify-center py-20 space-y-8">
                   <div className="relative">
                     <div
                       className="w-24 h-24 border-t-2 border-gold rounded-full animate-spin"
@@ -1064,7 +1063,7 @@ export default function App() {
                   </button>
                 </div>
               ) : error ? (
-                <div className="flex flex-col items-center justify-center py-20 space-y-6">
+                <div key="error-view" className="flex flex-col items-center justify-center py-20 space-y-6">
                   <div className="w-16 h-16 bg-terracotta/10 rounded-full flex items-center justify-center text-terracotta">
                     <RotateCcw size={32} />
                   </div>
@@ -1083,12 +1082,12 @@ export default function App() {
                   </button>
                 </div>
               ) : recipe ? (
-                <div key={recipe.name} className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
+                <div key="recipe-content" className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image Container */}
                   <div className="w-full relative overflow-hidden h-[400px] md:h-[500px] bg-charcoal">
                     {/* Placeholder / Image Generation UI */}
                     {!recipe.imageUrl && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center space-y-6 p-8">
+                      <div key="image-placeholder" className="absolute inset-0 flex flex-col items-center justify-center space-y-6 p-8 z-10">
                         <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
                           <ChefHat size={40} />
                         </div>
@@ -1113,16 +1112,16 @@ export default function App() {
                       </div>
                     )}
                     
-                    {/* The actual image */}
-                    {recipe.imageUrl && (
-                      <img 
-                        key={recipe.imageUrl}
-                        src={recipe.imageUrl} 
-                        alt={recipe.name} 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
+                    {/* The actual image - always present but hidden if no URL */}
+                    <img 
+                      src={recipe.imageUrl || ''} 
+                      alt={recipe.name} 
+                      className={cn(
+                        "w-full h-full object-cover transition-opacity duration-700",
+                        recipe.imageUrl ? "opacity-100" : "opacity-0"
+                      )}
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
 
                   {/* Recipe Title & Intro */}
@@ -1466,50 +1465,42 @@ export default function App() {
               )}
 
               {/* Delete Confirmation Modal */}
-              <AnimatePresence>
-                {recipeToDelete && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-charcoal/60 backdrop-blur-sm"
+              {recipeToDelete && (
+                <div
+                  className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-charcoal/60 backdrop-blur-sm"
+                >
+                  <div
+                    className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl space-y-6 border border-gold/10"
                   >
-                    <motion.div
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl space-y-6 border border-gold/10"
-                    >
-                      <div className="w-16 h-16 bg-terracotta/10 rounded-full flex items-center justify-center text-terracotta mx-auto">
-                        <Trash2 size={32} />
-                      </div>
-                      <div className="text-center space-y-2">
-                        <h3 className="text-xl font-serif text-charcoal">¿Eliminar receta?</h3>
-                        <p className="text-sm text-charcoal/60">
-                          Estás a punto de eliminar <span className="font-bold text-charcoal">"{recipeToDelete}"</span>. Esta acción no se puede deshacer.
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <button
-                          onClick={() => {
-                            deleteRecipe(recipeToDelete);
-                            setRecipeToDelete(null);
-                          }}
-                          className="w-full bg-terracotta text-white py-3 rounded-full text-sm font-medium hover:bg-red-700 transition-all"
-                        >
-                          Eliminar Permanentemente
-                        </button>
-                        <button
-                          onClick={() => setRecipeToDelete(null)}
-                          className="w-full bg-charcoal/5 text-charcoal/60 py-3 rounded-full text-sm font-medium hover:bg-charcoal/10 transition-all"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <div className="w-16 h-16 bg-terracotta/10 rounded-full flex items-center justify-center text-terracotta mx-auto">
+                      <Trash2 size={32} />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="text-xl font-serif text-charcoal">¿Eliminar receta?</h3>
+                      <p className="text-sm text-charcoal/60">
+                        Estás a punto de eliminar <span className="font-bold text-charcoal">"{recipeToDelete}"</span>. Esta acción no se puede deshacer.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={() => {
+                          deleteRecipe(recipeToDelete);
+                          setRecipeToDelete(null);
+                        }}
+                        className="w-full bg-terracotta text-white py-3 rounded-full text-sm font-medium hover:bg-red-700 transition-all"
+                      >
+                        Eliminar Permanentemente
+                      </button>
+                      <button
+                        onClick={() => setRecipeToDelete(null)}
+                        className="w-full bg-charcoal/5 text-charcoal/60 py-3 rounded-full text-sm font-medium hover:bg-charcoal/10 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
