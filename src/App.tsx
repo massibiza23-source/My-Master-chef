@@ -1049,10 +1049,8 @@ export default function App() {
           )}
 
           {step === 'recipe' && (
-            <motion.div
+            <div
               key="step-recipe"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
               className="space-y-12"
             >
               {loading ? (
@@ -1096,10 +1094,13 @@ export default function App() {
                   </button>
                 </div>
               ) : recipe ? (
-                <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
-                  {/* Recipe Image */}
-                  {recipe.imageUrl ? (
-                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden bg-charcoal/10">
+                <div key={recipe.name} className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
+                  {/* Recipe Image Container */}
+                  <div className={cn(
+                    "w-full relative overflow-hidden",
+                    recipe.imageUrl ? "h-[400px] md:h-[500px]" : "bg-charcoal py-12"
+                  )}>
+                    {recipe.imageUrl ? (
                       <img 
                         key={recipe.imageUrl}
                         src={recipe.imageUrl} 
@@ -1107,32 +1108,32 @@ export default function App() {
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
-                    </div>
-                  ) : (
-                    <div className="bg-charcoal py-12 flex flex-col items-center justify-center space-y-6">
-                      <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
-                        <ChefHat size={40} />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center space-y-6">
+                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
+                          <ChefHat size={40} />
+                        </div>
+                        <button
+                          onClick={handleGenerateImage}
+                          disabled={generatingImage}
+                          className="bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {generatingImage ? (
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                              Generando Imagen...
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-2">
+                              <Globe size={16} />
+                              Generar Imagen del Plato
+                            </span>
+                          )}
+                        </button>
+                        <p className="text-white/30 text-[10px] uppercase tracking-widest">Evita sobrecarga de tokens generando la imagen por separado</p>
                       </div>
-                      <button
-                        onClick={handleGenerateImage}
-                        disabled={generatingImage}
-                        className="bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
-                      >
-                        {generatingImage ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-                            Generando Imagen...
-                          </>
-                        ) : (
-                          <>
-                            <Globe size={16} />
-                            Generar Imagen del Plato
-                          </>
-                        )}
-                      </button>
-                      <p className="text-white/30 text-[10px] uppercase tracking-widest">Evita sobrecarga de tokens generando la imagen por separado</p>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Recipe Title & Intro */}
                   <div className={cn(
@@ -1323,8 +1324,8 @@ export default function App() {
                 </button>
               </div>
             )}
-          </motion.div>
-        )}
+            </div>
+          )}
           {step === 'saved' && (
             <motion.div
               key="step-saved"
