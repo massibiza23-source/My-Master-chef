@@ -710,13 +710,10 @@ export default function App() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <AnimatePresence mode="wait">
+        <div className="relative">
           {step === 'ingredients' && (
-            <motion.div
+            <div
               key="step-ingredients"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
               className="space-y-12"
             >
               {/* Quick Access Recetario */}
@@ -754,9 +751,8 @@ export default function App() {
                       })
                       .slice(0, 5)
                       .map((r, idx) => (
-                        <motion.div
+                        <div
                           key={`${r.name}-${idx}`}
-                          whileHover={{ y: -4 }}
                           onClick={() => { setRecipe(r); setStep('recipe'); }}
                           className="flex-shrink-0 w-48 bg-white rounded-2xl overflow-hidden shadow-sm border border-gold/5 cursor-pointer group"
                         >
@@ -771,7 +767,7 @@ export default function App() {
                             <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent" />
                             <p className="absolute bottom-2 left-3 right-3 text-xs font-serif text-white truncate">{r.name}</p>
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
                   </div>
                 </div>
@@ -836,17 +832,15 @@ export default function App() {
 
               <div className="flex flex-wrap gap-3 justify-center min-h-[60px]">
                 {ingredients.map((ing) => (
-                  <motion.span
+                  <span
                     key={ing}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
                     className="px-4 py-2 bg-white border border-gold/10 rounded-full text-sm flex items-center gap-2 shadow-sm"
                   >
                     {ing}
                     <button onClick={() => removeIngredient(ing)} className="text-terracotta hover:text-red-600">
                       <X size={14} />
                     </button>
-                  </motion.span>
+                  </span>
                 ))}
               </div>
 
@@ -885,15 +879,12 @@ export default function App() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           )}
 
           {step === 'profile' && (
-            <motion.div
+            <div
               key="step-profile"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
               className="space-y-12"
             >
               <div className="text-center space-y-4">
@@ -1045,7 +1036,7 @@ export default function App() {
                   Generar Receta Única
                 </button>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {step === 'recipe' && (
@@ -1056,10 +1047,8 @@ export default function App() {
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 space-y-8">
                   <div className="relative">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                      className="w-24 h-24 border-t-2 border-gold rounded-full"
+                    <div
+                      className="w-24 h-24 border-t-2 border-gold rounded-full animate-spin"
                     />
                     <ChefHat className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" size={32} />
                   </div>
@@ -1096,20 +1085,10 @@ export default function App() {
               ) : recipe ? (
                 <div key={recipe.name} className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image Container */}
-                  <div className={cn(
-                    "w-full relative overflow-hidden",
-                    recipe.imageUrl ? "h-[400px] md:h-[500px]" : "bg-charcoal py-12"
-                  )}>
-                    {recipe.imageUrl ? (
-                      <img 
-                        key={recipe.imageUrl}
-                        src={recipe.imageUrl} 
-                        alt={recipe.name} 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="w-full relative overflow-hidden h-[400px] md:h-[500px] bg-charcoal">
+                    {/* Placeholder / Image Generation UI */}
+                    {!recipe.imageUrl && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center space-y-6 p-8">
                         <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
                           <ChefHat size={40} />
                         </div>
@@ -1130,8 +1109,19 @@ export default function App() {
                             </span>
                           )}
                         </button>
-                        <p className="text-white/30 text-[10px] uppercase tracking-widest">Evita sobrecarga de tokens generando la imagen por separado</p>
+                        <p className="text-white/30 text-[10px] uppercase tracking-widest text-center">Evita sobrecarga de tokens generando la imagen por separado</p>
                       </div>
+                    )}
+                    
+                    {/* The actual image */}
+                    {recipe.imageUrl && (
+                      <img 
+                        key={recipe.imageUrl}
+                        src={recipe.imageUrl} 
+                        alt={recipe.name} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
                     )}
                   </div>
 
@@ -1263,23 +1253,15 @@ export default function App() {
                           )}
                         >
                           {showSaveFeedback === 'saved' ? (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="flex items-center gap-2"
-                            >
+                            <div className="flex items-center gap-2">
                               <Sparkles size={18} />
                               ¡Guardada!
-                            </motion.div>
+                            </div>
                           ) : showSaveFeedback === 'already' ? (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="flex items-center gap-2"
-                            >
+                            <div className="flex items-center gap-2">
                               <Bookmark size={18} />
                               Ya en el recetario
-                            </motion.div>
+                            </div>
                           ) : (
                             <>
                               <Bookmark size={18} />
@@ -1327,11 +1309,8 @@ export default function App() {
             </div>
           )}
           {step === 'saved' && (
-            <motion.div
+            <div
               key="step-saved"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
               className="space-y-12"
             >
               <div className="flex flex-col items-center space-y-8">
@@ -1437,11 +1416,8 @@ export default function App() {
                     }
 
                     return filtered.map((r, idx) => (
-                      <motion.div
+                      <div
                         key={`${r.name}-${idx}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
                         className="bg-white rounded-3xl overflow-hidden shadow-lg border border-gold/5 group"
                       >
                         <div className="h-48 relative overflow-hidden">
@@ -1483,7 +1459,7 @@ export default function App() {
                             <Trash2 size={18} />
                           </button>
                         </div>
-                      </motion.div>
+                      </div>
                     ));
                   })()}
                 </div>
@@ -1534,9 +1510,9 @@ export default function App() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
+        </div>
       </main>
 
       {/* Footer */}
