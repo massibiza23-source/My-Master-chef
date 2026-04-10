@@ -62,6 +62,7 @@ export default function App() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   // Handle URL share
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function App() {
     { id: 'lunch', label: 'Almuerzo', icon: Clock },
     { id: 'dinner', label: 'Cena', icon: Flame },
     { id: 'soup', label: 'Sopa', icon: Soup },
+    { id: 'regional', label: 'Plato Regional', icon: Globe },
   ] as const;
 
   // Load saved recipes from localStorage (Already handled in useState initializer)
@@ -121,8 +123,12 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('flavor_engine_recipes', JSON.stringify(savedRecipes));
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error saving to localStorage", e);
+      if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        // If storage is full, try to save without images for older recipes or warn the user
+        console.warn("LocalStorage quota exceeded. Try deleting some recipes.");
+      }
     }
   }, [savedRecipes]);
 
@@ -148,14 +154,14 @@ export default function App() {
     setRecipe(null); // Clear previous recipe
     setStep('recipe');
 
-    // Timeout of 60 seconds for the text generation
+    // Timeout of 120 seconds for the text generation
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("TIMEOUT")), 60000)
+      setTimeout(() => reject(new Error("TIMEOUT")), 120000)
     );
 
     try {
       const result = await Promise.race([
-        generateRecipeText(ingredients, profile, savedRecipes.map(r => r.name)),
+        generateRecipeText(ingredients, profile, (Array.isArray(savedRecipes) ? savedRecipes : []).filter(r => r && r.name).slice(0, 10).map(r => r.name)),
         timeoutPromise
       ]) as Recipe;
 
@@ -165,16 +171,6 @@ export default function App() {
 
       setRecipe(result);
       setLoading(false); // Show text immediately
-      
-      // Load image in background (don't block the UI for this)
-      generateRecipeImage(result.name, result.ingredients.map(i => i.item))
-        .then(imageUrl => {
-          if (imageUrl) {
-            setRecipe(prev => prev ? { ...prev, imageUrl } : null);
-          }
-        })
-        .catch(err => console.error("Background image generation failed:", err));
-
     } catch (err: any) {
       console.error("Error generating recipe:", err);
       
@@ -204,10 +200,26 @@ export default function App() {
     }
   };
 
+  const handleGenerateImage = async () => {
+    if (!recipe || generatingImage) return;
+    setGeneratingImage(true);
+    try {
+      const imageUrl = await generateRecipeImage(recipe.name, recipe.ingredients.map(i => i.item));
+      if (imageUrl) {
+        setRecipe(prev => prev ? { ...prev, imageUrl } : null);
+      }
+    } catch (err) {
+      console.error("Manual image generation failed:", err);
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
   const saveRecipe = () => {
-    if (recipe) {
-      if (!savedRecipes.some(r => r && r.name === recipe.name)) {
-        setSavedRecipes([recipe, ...savedRecipes]);
+    if (recipe && recipe.name) {
+      const currentSaved = Array.isArray(savedRecipes) ? savedRecipes : [];
+      if (!currentSaved.some(r => r && r.name === recipe.name)) {
+        setSavedRecipes([recipe, ...currentSaved]);
         setShowSaveFeedback('saved');
         setTimeout(() => setShowSaveFeedback(null), 3000);
       } else {
@@ -243,19 +255,21 @@ export default function App() {
 </head>
 <body>
     <h1>Mi Recetario Personal</h1>
-    ${savedRecipes.map(r => `
+    ${savedRecipes.map(r => {
+      if (!r || !r.name) return '';
+      return `
     <div class="recipe-card">
         <h2>${r.name}</h2>
-        <p class="history">${r.history}</p>
+        <p class="history">${r.history || ''}</p>
         
         <div class="section-title">Ingredientes</div>
         <ul>
-            ${r.ingredients.map(i => `<li>${i.item}${i.alternative ? ` (Opcional: ${i.alternative})` : ''}</li>`).join('')}
+            ${(r.ingredients || []).map(i => `<li>${i.item || ''}${i.alternative ? ` (Opcional: ${i.alternative})` : ''}</li>`).join('')}
         </ul>
         
         <div class="section-title">Pasos</div>
         <ol>
-            ${r.steps.map(s => `<li>${s}</li>`).join('')}
+            ${(r.steps || []).map(s => `<li>${s}</li>`).join('')}
         </ol>
         
         ${r.tricks && r.tricks.length > 0 ? `
@@ -266,9 +280,10 @@ export default function App() {
         ` : ''}
         
         <div class="section-title">Consejo del Chef</div>
-        <p>${r.chefTip}</p>
+        <p>${r.chefTip || ''}</p>
     </div>
-    `).join('')}
+    `;
+    }).join('')}
     <div class="footer">Generado por AI Flavor Engine &copy; 2026</div>
 </body>
 </html>`;
@@ -285,17 +300,18 @@ export default function App() {
   };
 
   const deleteRecipe = (name: string) => {
-    setSavedRecipes(savedRecipes.filter(r => r.name !== name));
+    setSavedRecipes(savedRecipes.filter(r => r && r.name && r.name !== name));
   };
 
   const generateRecipeHtml = (r: Recipe) => {
+    if (!r) return '';
     return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${r.name} - AI Flavor Engine</title>
+    <title>${r.name || 'Receta'} - AI Flavor Engine</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -456,15 +472,15 @@ export default function App() {
 </head>
 <body>
     <div class="container">
-        ${r.imageUrl ? `<img src="${r.imageUrl}" alt="${r.name}" class="hero-image">` : ''}
+        ${r.imageUrl ? `<img src="${r.imageUrl}" alt="${r.name || ''}" class="hero-image">` : ''}
         <div class="hero-text ${!r.imageUrl ? 'no-image' : ''}">
             <span class="tag">Creación Exclusiva</span>
-            <h1>${r.name}</h1>
+            <h1>${r.name || 'Receta'}</h1>
             <div style="display:flex; justify-content:center; gap:20px; margin-bottom:20px; font-size:12px; font-weight:bold; color:var(--gold); text-transform:uppercase; letter-spacing:0.1em;">
-                <span>⏱️ ${r.prepTime}</span>
-                <span>🔥 ${r.nutrition.calories}</span>
+                <span>⏱️ ${r.prepTime || 'N/A'}</span>
+                <span>🔥 ${r.nutrition?.calories || 'N/A'}</span>
             </div>
-            <p class="history">"${r.history}"</p>
+            <p class="history">"${r.history || ''}"</p>
         </div>
         <div class="content">
             ${r.courses && r.courses.length > 0 ? `
@@ -473,9 +489,9 @@ export default function App() {
                 <div class="courses-grid">
                     ${r.courses.map(c => `
                     <div class="course-item">
-                        <span>${c.title}</span>
-                        <h3>${c.name}</h3>
-                        <p>${c.description}</p>
+                        <span>${c.title || ''}</span>
+                        <h3>${c.name || ''}</h3>
+                        <p>${c.description || ''}</p>
                     </div>
                     `).join('')}
                 </div>
@@ -486,12 +502,12 @@ export default function App() {
                 <div>
                     <h2>Ingredientes</h2>
                     <ul>
-                        ${r.ingredients.map(i => `<li><strong>${i.item}</strong>${i.alternative ? `<br><small style="color:var(--gold)">Alt: ${i.alternative}</small>` : ''}</li>`).join('')}
+                        ${(r.ingredients || []).map(i => `<li><strong>${i.item || ''}</strong>${i.alternative ? `<br><small style="color:var(--gold)">Alt: ${i.alternative}</small>` : ''}</li>`).join('')}
                     </ul>
                 </div>
                 <div>
                     <h2>Preparación</h2>
-                    ${r.steps.map((s, i) => `
+                    ${(r.steps || []).map((s, i) => `
                     <div class="step">
                         <div class="step-num">${(i + 1).toString().padStart(2, '0')}</div>
                         <div class="step-text">${s}</div>
@@ -499,7 +515,7 @@ export default function App() {
                     `).join('')}
                     <div class="tip-box">
                         <strong style="color:var(--gold); display:block; margin-bottom:10px; font-style:normal;">Consejo del Chef</strong>
-                        ${r.chefTip}
+                        ${r.chefTip || ''}
                         
                         ${r.tricks && r.tricks.length > 0 ? `
                         <hr style="border:0; border-top:1px solid rgba(192, 140, 93, 0.1); margin:20px 0;">
@@ -520,16 +536,17 @@ export default function App() {
   };
 
   const shareWhatsApp = async (r: Recipe) => {
+    if (!r) return;
     // Try native sharing of the HTML file first (Mobile)
     const html = generateRecipeHtml(r);
-    const fileName = `${r.name.toLowerCase().replace(/\s+/g, '-')}.html`;
+    const fileName = `${(r.name || 'receta').toLowerCase().replace(/\s+/g, '-')}.html`;
     const file = new File([html], fileName, { type: 'text/html' });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
           files: [file],
-          title: `Menú: ${r.name}`,
+          title: `Menú: ${r.name || 'Receta'}`,
           text: 'Mira este menú gourmet que he creado.',
         });
         return;
@@ -539,20 +556,27 @@ export default function App() {
     }
 
     // Fallback to Direct Link + Text (Desktop or unsupported browsers)
-    const shareUrl = `${window.location.origin}${window.location.pathname}?recipe=${btoa(unescape(encodeURIComponent(JSON.stringify(r))))}`;
+    let shareUrl = '';
+    try {
+      // Create a copy without the image to avoid exceeding URL length limits
+      const { imageUrl, ...recipeWithoutImage } = r;
+      shareUrl = `${window.location.origin}${window.location.pathname}?recipe=${btoa(unescape(encodeURIComponent(JSON.stringify(recipeWithoutImage))))}`;
+    } catch (e) {
+      console.error("Error generating share URL", e);
+    }
     
-    let text = `🌟 *${r.name.toUpperCase()}* 🌟\n`;
-    text += `_"${r.history}"_\n\n`;
-    text += `⏱️ *Tiempo:* ${r.prepTime}\n`;
-    text += `🔥 *Calorías:* ${r.nutrition.calories}\n\n`;
+    let text = `🌟 *${(r.name || 'Receta').toUpperCase()}* 🌟\n`;
+    text += `_"${r.history || ''}"_\n\n`;
+    text += `⏱️ *Tiempo:* ${r.prepTime || 'N/A'}\n`;
+    text += `🔥 *Calorías:* ${r.nutrition?.calories || 'N/A'}\n\n`;
     
     if (r.courses && r.courses.length > 0) {
       text += `🍽️ *MENÚ DEGUSTACIÓN*\n`;
       text += `━━━━━━━━━━━━━━━━━━\n`;
       r.courses.forEach(c => {
-        text += `*${c.title.toUpperCase()}*\n`;
-        text += `✨ ${c.name}\n`;
-        text += `_${c.description}_\n\n`;
+        text += `*${(c.title || '').toUpperCase()}*\n`;
+        text += `✨ ${c.name || ''}\n`;
+        text += `_${c.description || ''}_\n\n`;
       });
       text += `━━━━━━━━━━━━━━━━━━\n\n`;
     }
@@ -563,8 +587,10 @@ export default function App() {
       text += `\n`;
     }
 
-    text += `👨‍🍳 *PREPARACIÓN Y DETALLES:*\n`;
-    text += `${shareUrl}\n\n`;
+    if (shareUrl) {
+      text += `👨‍🍳 *PREPARACIÓN Y DETALLES:*\n`;
+      text += `${shareUrl}\n\n`;
+    }
     
     text += `_Generado por AI Flavor Engine_`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -596,6 +622,10 @@ export default function App() {
     { 
       category: 'Vegetales', 
       items: ['Cebolla', 'Ajo', 'Tomate', 'Zanahoria', 'Pimiento', 'Brócoli', 'Espinacas', 'Patata', 'Calabacín'] 
+    },
+    { 
+      category: 'Legumbres', 
+      items: ['Garbanzos', 'Guisantes', 'Lentejas', 'Alubias', 'Habas'] 
     },
     { 
       category: 'Frutas', 
@@ -706,16 +736,18 @@ export default function App() {
                     </div>
                   </div>
                   <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                    {[...savedRecipes]
-                      .filter(r => r && r.name)
-                      .sort((a, b) => sortOrder === 'asc' 
-                        ? a.name.localeCompare(b.name) 
-                        : b.name.localeCompare(a.name)
-                      )
+                    {(Array.isArray(savedRecipes) ? [...savedRecipes] : [])
+                      .filter(r => r && typeof r.name === 'string')
+                      .sort((a, b) => {
+                        if (!a || !b || typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
+                        return sortOrder === 'asc' 
+                          ? a.name.localeCompare(b.name) 
+                          : b.name.localeCompare(a.name);
+                      })
                       .slice(0, 5)
-                      .map((r) => (
+                      .map((r, idx) => (
                         <motion.div
-                          key={r.name}
+                          key={`${r.name}-${idx}`}
                           whileHover={{ y: -4 }}
                           onClick={() => { setRecipe(r); setStep('recipe'); }}
                           className="flex-shrink-0 w-48 bg-white rounded-2xl overflow-hidden shadow-sm border border-gold/5 cursor-pointer group"
@@ -923,13 +955,13 @@ export default function App() {
                   <div className="space-y-4">
                     <h3 className="text-xl font-serif flex items-center gap-2">
                       <Globe size={20} className="text-gold" />
-                      Fusión Cultural
+                      Fusión o Región
                     </h3>
                     <input
                       type="text"
                       value={profile.fusion}
                       onChange={(e) => setProfile({ ...profile, fusion: e.target.value })}
-                      placeholder="Ej: México + Japón, Mediterráneo..."
+                      placeholder="Ej: Mediterránea, Gallega, México + Japón..."
                       className="w-full bg-white border border-gold/20 rounded-xl py-3 px-4 outline-none focus:border-gold transition-colors"
                     />
                   </div>
@@ -1068,10 +1100,28 @@ export default function App() {
                       />
                     </div>
                   ) : (
-                    <div className="bg-charcoal pt-12 pb-4 flex justify-center">
+                    <div className="bg-charcoal py-12 flex flex-col items-center justify-center space-y-6">
                       <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center text-gold">
                         <ChefHat size={40} />
                       </div>
+                      <button
+                        onClick={handleGenerateImage}
+                        disabled={generatingImage}
+                        className="bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {generatingImage ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                            Generando Imagen...
+                          </>
+                        ) : (
+                          <>
+                            <Globe size={16} />
+                            Generar Imagen del Plato
+                          </>
+                        )}
+                      </button>
+                      <p className="text-white/30 text-[10px] uppercase tracking-widest">Evita sobrecarga de tokens generando la imagen por separado</p>
                     </div>
                   )}
 
@@ -1200,7 +1250,7 @@ export default function App() {
                           onClick={saveRecipe}
                           className={cn(
                             "flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all",
-                            savedRecipes.some(r => r && r.name === recipe.name)
+                            (Array.isArray(savedRecipes) ? savedRecipes : []).some(r => r && r.name === recipe.name)
                               ? "bg-gold text-white"
                               : "bg-charcoal text-white hover:bg-charcoal/90"
                           )}
@@ -1290,7 +1340,7 @@ export default function App() {
                   <h2 className="text-4xl font-serif text-charcoal">Mi <span className="text-gold">Recetario</span></h2>
                   <p className="text-charcoal/60">Tu colección personal de creaciones culinarias.</p>
                   
-                  {savedRecipes.length > 0 && (
+                  {(Array.isArray(savedRecipes) ? savedRecipes : []).length > 0 && (
                   <div className="max-w-md mx-auto space-y-4 pt-4">
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gold/40" size={18} />
@@ -1341,7 +1391,7 @@ export default function App() {
               </div>
             </div>
 
-            {savedRecipes.length === 0 ? (
+            {(!Array.isArray(savedRecipes) || savedRecipes.length === 0) ? (
                 <div className="text-center py-20 border-2 border-dashed border-gold/20 rounded-[2rem] space-y-6">
                   <Bookmark size={48} className="mx-auto text-gold/20" />
                   <p className="text-charcoal/40 font-serif italic text-xl">Aún no has guardado ninguna receta.</p>
@@ -1355,17 +1405,20 @@ export default function App() {
               ) : (
                 <div className="grid md:grid-cols-2 gap-8">
                   {(() => {
-                    const filtered = savedRecipes
+                    const currentSaved = Array.isArray(savedRecipes) ? savedRecipes : [];
+                    const filtered = currentSaved
                       .filter(r => {
-                        if (!r || !r.name || !r.ingredients) return false;
+                        if (!r || typeof r.name !== 'string' || !Array.isArray(r.ingredients)) return false;
                         const search = searchTerm.toLowerCase();
                         return r.name.toLowerCase().includes(search) || 
-                               r.ingredients.some(i => i && i.item && i.item.toLowerCase().includes(search));
+                               r.ingredients.some(i => i && typeof i.item === 'string' && i.item.toLowerCase().includes(search));
                       })
-                      .sort((a, b) => sortOrder === 'asc' 
-                        ? a.name.localeCompare(b.name) 
-                        : b.name.localeCompare(a.name)
-                      );
+                      .sort((a, b) => {
+                        if (!a || !b || typeof a.name !== 'string' || typeof b.name !== 'string') return 0;
+                        return sortOrder === 'asc' 
+                          ? a.name.localeCompare(b.name) 
+                          : b.name.localeCompare(a.name);
+                      });
                     
                     if (filtered.length === 0 && searchTerm) {
                       return (
@@ -1378,7 +1431,7 @@ export default function App() {
 
                     return filtered.map((r, idx) => (
                       <motion.div
-                        key={r.name}
+                        key={`${r.name}-${idx}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}

@@ -24,21 +24,10 @@ export async function generateRecipeText(
     Fusión cultural: ${profile.fusion || "Libre"}
     Idioma: ${profile.language}
     
+    ${profile.mealType === 'regional' ? 'IMPORTANTE: Al ser un "Plato Regional", asegúrate de que la receta tenga una fuerte identidad de una región específica (puedes elegir la región que mejor encaje con los ingredientes o basarte en la fusión cultural si se especifica). Explica brevemente el origen regional en la sección "history".' : ''}
+    
     IMPORTANTE: No repitas ninguna de estas recetas que ya han sido generadas: ${previousRecipes.join(", ") || "Ninguna"}.
     Busca una combinación de sabores diferente y un nombre original.
-    
-    JSON:
-    {
-      "name": "Nombre corto y original",
-      "history": "Inspiración (1 línea)",
-      "prepTime": "Tiempo total (ej: 45 min)",
-      "tricks": ["truco 1", "truco 2"],
-      "courses": [{"title": "Entrante", "name": "Nombre", "description": "Breve"}],
-      "ingredients": [{"item": "cantidad e ingrediente", "alternative": "opcional"}],
-      "steps": ["paso corto 1"],
-      "nutrition": {"calories": "kcal", "protein": "g", "carbs": "g", "fat": "g"},
-      "chefTip": "Consejo breve"
-    }
   `;
 
   const maxRetries = 3;
@@ -53,6 +42,7 @@ export async function generateRecipeText(
           systemInstruction: "Eres un Chef Ejecutivo de alta cocina. Tu objetivo es crear recetas innovadoras y equilibradas. Sé profesional, claro y eficiente en tus explicaciones.",
           responseMimeType: "application/json",
           maxOutputTokens: 2048,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           responseSchema: {
             type: Type.OBJECT,
             properties: {
@@ -132,7 +122,12 @@ export async function generateRecipeText(
 
 export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return undefined;
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY not found. Image generation will be skipped. If you are on Vercel, ensure you have set the GEMINI_API_KEY environment variable.");
+    // Fallback to a placeholder image based on the recipe name
+    const seed = encodeURIComponent(recipeName.toLowerCase().replace(/\s+/g, '-'));
+    return `https://picsum.photos/seed/${seed}/1200/800`;
+  }
   const ai = new GoogleGenAI({ apiKey });
 
   const maxRetries = 2;
@@ -202,6 +197,10 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
       }
 
       console.error("Error generating image:", imageError);
+      
+      // Final fallback to a placeholder image if all AI attempts fail
+      const seed = encodeURIComponent(recipeName.toLowerCase().replace(/\s+/g, '-'));
+      return `https://picsum.photos/seed/${seed}/1200/800`;
     }
     return undefined;
   };
