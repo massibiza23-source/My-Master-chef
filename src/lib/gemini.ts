@@ -149,14 +149,18 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
         },
         config: {
           imageConfig: {
-            aspectRatio: "16:9"
+            aspectRatio: "16:9",
+            // Limit size to avoid memory issues and URL length limits
+            // @ts-ignore - imageSize might not be in all type definitions but is supported
+            imageSize: "512px"
           }
         }
       });
 
-      if (imageResponse.candidates?.[0]?.content?.parts) {
-        for (const part of imageResponse.candidates[0].content.parts) {
-          if (part.inlineData) {
+      const parts = imageResponse.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (part.inlineData?.data) {
             return `data:image/png;base64,${part.inlineData.data}`;
           }
         }
@@ -189,8 +193,9 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
           },
         });
 
-        if (imagenResponse.generatedImages?.[0]?.image?.imageBytes) {
-          return `data:image/jpeg;base64,${imagenResponse.generatedImages[0].image.imageBytes}`;
+        const generatedImage = imagenResponse.generatedImages?.[0]?.image;
+        if (generatedImage?.imageBytes) {
+          return `data:image/jpeg;base64,${generatedImage.imageBytes}`;
         }
       } catch (fallbackError) {
         console.error("Fallback image generation also failed:", fallbackError);

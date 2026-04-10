@@ -201,12 +201,18 @@ export default function App() {
   };
 
   const handleGenerateImage = async () => {
-    if (!recipe || generatingImage) return;
+    if (!recipe || !Array.isArray(recipe.ingredients) || generatingImage) return;
+    const currentRecipeName = recipe.name;
     setGeneratingImage(true);
     try {
       const imageUrl = await generateRecipeImage(recipe.name, recipe.ingredients.map(i => i.item));
       if (imageUrl) {
-        setRecipe(prev => prev ? { ...prev, imageUrl } : null);
+        setRecipe(prev => {
+          if (prev && prev.name === currentRecipeName) {
+            return { ...prev, imageUrl };
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error("Manual image generation failed:", err);
@@ -1097,6 +1103,11 @@ export default function App() {
                         alt={recipe.name} 
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
+                        onError={() => {
+                          console.error("Image failed to load");
+                          // If it fails, we can either show a placeholder or clear the URL
+                          setRecipe(prev => prev ? { ...prev, imageUrl: undefined } : null);
+                        }}
                       />
                     </div>
                   ) : (
@@ -1130,10 +1141,7 @@ export default function App() {
                     "p-8 md:p-12 text-center space-y-6",
                     !recipe.imageUrl && "bg-charcoal text-white pt-4 pb-12"
                   )}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
+                    <div>
                       <span className="text-gold text-xs uppercase tracking-[0.3em] font-medium mb-4 block">Creación Exclusiva</span>
                       <h2 className={cn(
                         "text-4xl md:text-6xl font-serif mb-6",
@@ -1161,7 +1169,7 @@ export default function App() {
                       )}>
                         "{recipe.history}"
                       </p>
-                    </motion.div>
+                    </div>
                   </div>
 
                   <div className="px-8 md:px-12 pb-12 space-y-12">
