@@ -204,8 +204,10 @@ export default function App() {
     if (!recipe || !Array.isArray(recipe.ingredients) || generatingImage) return;
     const currentRecipeName = recipe.name;
     setGeneratingImage(true);
+    console.log("Starting image generation for:", currentRecipeName);
     try {
       const imageUrl = await generateRecipeImage(recipe.name, recipe.ingredients.map(i => i.item));
+      console.log("Image generation result:", imageUrl ? "Success (Base64/URL)" : "Failed");
       if (imageUrl) {
         setRecipe(prev => {
           if (prev && prev.name === currentRecipeName) {
@@ -1097,17 +1099,13 @@ export default function App() {
                 <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-gold/5">
                   {/* Recipe Image */}
                   {recipe.imageUrl ? (
-                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden">
+                    <div className="w-full h-[400px] md:h-[500px] relative overflow-hidden bg-charcoal/10">
                       <img 
+                        key={recipe.imageUrl}
                         src={recipe.imageUrl} 
                         alt={recipe.name} 
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
-                        onError={() => {
-                          console.error("Image failed to load");
-                          // If it fails, we can either show a placeholder or clear the URL
-                          setRecipe(prev => prev ? { ...prev, imageUrl: undefined } : null);
-                        }}
                       />
                     </div>
                   ) : (
@@ -1139,35 +1137,35 @@ export default function App() {
                   {/* Recipe Title & Intro */}
                   <div className={cn(
                     "p-8 md:p-12 text-center space-y-6",
-                    !recipe.imageUrl && "bg-charcoal text-white pt-4 pb-12"
+                    !recipe?.imageUrl && "bg-charcoal text-white pt-4 pb-12"
                   )}>
                     <div>
                       <span className="text-gold text-xs uppercase tracking-[0.3em] font-medium mb-4 block">Creación Exclusiva</span>
                       <h2 className={cn(
                         "text-4xl md:text-6xl font-serif mb-6",
-                        recipe.imageUrl ? "text-charcoal" : "text-white"
-                      )}>{recipe.name}</h2>
+                        recipe?.imageUrl ? "text-charcoal" : "text-white"
+                      )}>{recipe?.name || "Receta"}</h2>
                       <div className="flex justify-center items-center gap-6 mb-6">
                         <div className={cn(
                           "flex items-center gap-2 text-xs font-bold uppercase tracking-widest",
-                          recipe.imageUrl ? "text-gold" : "text-gold/80"
+                          recipe?.imageUrl ? "text-gold" : "text-gold/80"
                         )}>
                           <Clock size={14} />
-                          {recipe.prepTime}
+                          {recipe?.prepTime || "N/A"}
                         </div>
                         <div className={cn(
                           "flex items-center gap-2 text-xs font-bold uppercase tracking-widest",
-                          recipe.imageUrl ? "text-gold" : "text-gold/80"
+                          recipe?.imageUrl ? "text-gold" : "text-gold/80"
                         )}>
                           <Flame size={14} />
-                          {recipe.nutrition.calories}
+                          {recipe?.nutrition?.calories || "N/A"}
                         </div>
                       </div>
                       <p className={cn(
                         "italic max-w-2xl mx-auto leading-relaxed",
-                        recipe.imageUrl ? "text-charcoal/60" : "text-white/60"
+                        recipe?.imageUrl ? "text-charcoal/60" : "text-white/60"
                       )}>
-                        "{recipe.history}"
+                        "{recipe?.history || ""}"
                       </p>
                     </div>
                   </div>

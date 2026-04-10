@@ -5,14 +5,14 @@ import './index.css';
 import { RotateCcw } from 'lucide-react';
 
 // Error Boundary Component
-class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -29,8 +29,15 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
             </div>
             <h2 className="text-2xl font-serif text-[#1A1A1A]">Algo salió mal</h2>
             <p className="text-[#1A1A1A]/60 text-sm">
-              Hubo un error al cargar la aplicación. Por favor, intenta recargar la página.
+              Hubo un error al cargar la aplicación.
             </p>
+            {this.state.error && (
+              <div className="bg-red-50 p-4 rounded-xl text-left overflow-auto max-h-40">
+                <p className="text-red-800 text-xs font-mono break-all">
+                  {this.state.error.name}: {this.state.error.message}
+                </p>
+              </div>
+            )}
             <button 
               onClick={() => window.location.reload()}
               className="w-full bg-[#C08C5D] text-white py-3 rounded-full text-sm font-medium hover:bg-[#A64D32] transition-all"

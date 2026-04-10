@@ -135,9 +135,9 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
   const executeImageRequest = async (): Promise<string | undefined> => {
     try {
-      // Usamos la estructura de partes recomendada para modelos nano banana
+      // Usamos gemini-3.1-flash-image-preview para mayor calidad y estabilidad
       const imageResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3.1-flash-image-preview",
         contents: {
           parts: [
             {
@@ -150,8 +150,6 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
         config: {
           imageConfig: {
             aspectRatio: "16:9",
-            // Limit size to avoid memory issues and URL length limits
-            // @ts-ignore - imageSize might not be in all type definitions but is supported
             imageSize: "512px"
           }
         }
