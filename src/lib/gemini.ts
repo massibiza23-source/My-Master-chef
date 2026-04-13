@@ -120,7 +120,7 @@ export async function generateRecipeText(
   return executeRequest();
 }
 
-export async function generateRecipeImage(recipeName: string, ingredients: string[]): Promise<string | undefined> {
+export async function generateRecipeImage(recipeName: string, ingredients: string[], history?: string): Promise<string | undefined> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("GEMINI_API_KEY not found. Image generation will be skipped. If you are on Vercel, ensure you have set the GEMINI_API_KEY environment variable.");
@@ -135,22 +135,22 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
   const executeImageRequest = async (): Promise<string | undefined> => {
     try {
-      // Usamos gemini-3.1-flash-image-preview para mayor calidad y estabilidad
+      console.log("Solicitando imagen para:", recipeName);
+      // Usamos gemini-2.5-flash-image para mayor estabilidad
       const imageResponse = await ai.models.generateContent({
-        model: "gemini-3.1-flash-image-preview",
+        model: "gemini-2.5-flash-image",
         contents: {
           parts: [
             {
-              text: `A professional, high-end culinary photograph of a dish named "${recipeName}". 
-                     Style: Minimalist, elegant, gourmet presentation, soft natural lighting, 
-                     warm tones, shallow depth of field. The dish features: ${ingredients.join(", ")}.`
+              text: `Food photography of a gourmet dish: ${recipeName}. 
+                     Ingredients: ${ingredients.slice(0, 5).join(", ")}. 
+                     Style: Professional, appetizing, minimalist background, natural light.`
             }
           ]
         },
         config: {
           imageConfig: {
-            aspectRatio: "16:9",
-            imageSize: "512px"
+            aspectRatio: "16:9"
           }
         }
       });
@@ -159,31 +159,38 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
       if (parts) {
         for (const part of parts) {
           if (part.inlineData?.data) {
+            console.log("Imagen generada con éxito por Gemini.");
             return `data:image/png;base64,${part.inlineData.data}`;
           }
         }
       }
       
-      // Si no hay imagen en la respuesta, lanzamos error para intentar reintento o fallback
-      throw new Error("No image data in response");
+      throw new Error("La respuesta de la IA no contenía datos de imagen.");
 
     } catch (imageError: any) {
-      const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
+      console.error("Error detallado en generación de imagen:", imageError);
       
+      const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
+      const isSafety = imageError?.message?.includes("SAFETY") || String(imageError).includes("SAFETY");
+
       if (is429 && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000;
-        console.log(`Retrying image after 429 error (attempt ${retryCount})... waiting ${delay}ms`);
+        console.log(`Reintentando imagen (intento ${retryCount})...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeImageRequest();
       }
 
-      // Fallback a Imagen 4.0 si el modelo flash-image falla por otras razones
+      if (isSafety) {
+        console.warn("La imagen fue bloqueada por los filtros de seguridad de la API.");
+      }
+
+      // Fallback a Imagen 4.0
       try {
-        console.log("Attempting fallback to Imagen 4.0...");
+        console.log("Intentando respaldo con Imagen 4.0...");
         const imagenResponse = await ai.models.generateImages({
           model: 'imagen-4.0-generate-001',
-          prompt: `A professional, high-end culinary photograph of a dish named "${recipeName}" with ${ingredients.join(", ")}. Gourmet presentation.`,
+          prompt: `Gourmet food: ${recipeName}. Professional photography.`,
           config: {
             numberOfImages: 1,
             outputMimeType: 'image/jpeg',
@@ -196,16 +203,14 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
           return `data:image/jpeg;base64,${generatedImage.imageBytes}`;
         }
       } catch (fallbackError) {
-        console.error("Fallback image generation also failed:", fallbackError);
+        console.error("El respaldo de Imagen 4.0 también falló:", fallbackError);
       }
 
-      console.error("Error generating image:", imageError);
-      
-      // Final fallback to a placeholder image if all AI attempts fail
+      // Si todo falla, usamos el seed de Picsum pero avisamos
+      console.warn("Usando imagen aleatoria de respaldo (Picsum) debido a errores en la API.");
       const seed = encodeURIComponent(recipeName.toLowerCase().replace(/\s+/g, '-'));
       return `https://picsum.photos/seed/${seed}/1200/800`;
     }
-    return undefined;
   };
 
   return executeImageRequest();

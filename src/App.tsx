@@ -160,7 +160,7 @@ export default function App() {
     if (!recipe || generatingImage) return;
     setGeneratingImage(true);
     try {
-      const imageUrl = await generateRecipeImage(recipe.name, recipe.ingredients.map(i => i.item));
+      const imageUrl = await generateRecipeImage(recipe.name, recipe.ingredients.map(i => i.item), recipe.history);
       if (imageUrl) {
         setRecipe(prev => prev ? { ...prev, imageUrl } : prev);
       }
