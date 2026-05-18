@@ -1,5 +1,6 @@
 {
   "name": "AI Flavor Engine",
   "description": "Sistema avanzado de IA culinaria para crear recetas únicas y fusiones globales personalizadas.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
