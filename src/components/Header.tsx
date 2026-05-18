@@ -30,8 +30,9 @@ export function Header({
         <div className="w-10 h-10 bg-charcoal rounded-full flex items-center justify-center text-gold">
           <ChefHat size={24} />
         </div>
-        <h1 className="text-2xl font-serif tracking-tight text-charcoal">
+        <h1 className="text-2xl font-serif tracking-tight text-charcoal flex items-center gap-2">
           AI Flavor <span className="text-gold">Engine</span>
+          <span className="text-[8px] bg-gold/10 text-gold border border-gold/20 px-1.5 py-0.5 rounded-full uppercase tracking-[0.2em] font-bold">Chef Edition</span>
         </h1>
       </div>
       <div className="flex items-center gap-4">

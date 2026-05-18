@@ -35,14 +35,15 @@ export async function generateRecipeText(
 
   const executeRequest = async (): Promise<Recipe> => {
     try {
+      // Usamos gemini-3.1-pro-preview para razonamiento complejo y mayor calidad
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.1-pro-preview",
         contents: prompt,
         config: {
-          systemInstruction: "Eres un Chef Ejecutivo de alta cocina. Tu objetivo es crear recetas innovadoras y equilibradas. Sé profesional, claro y eficiente en tus explicaciones.",
+          systemInstruction: "Eres un Chef Ejecutivo de alta cocina. Tu objetivo es crear recetas innovadoras y equilibradas. Sé profesional, claro y eficiente en tus explicaciones. Proporciona siempre un maridaje sugerido (vino, cóctel o bebida artesanal) que complemente los sabores del plato.",
           responseMimeType: "application/json",
           maxOutputTokens: 2048,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
           responseSchema: {
             type: Type.OBJECT,
             properties: {
@@ -90,9 +91,17 @@ export async function generateRecipeText(
                 },
                 required: ["calories", "protein", "carbs", "fat"]
               },
+              pairing: {
+                type: Type.OBJECT,
+                properties: {
+                  drink: { type: Type.STRING },
+                  description: { type: Type.STRING }
+                },
+                required: ["drink", "description"]
+              },
               chefTip: { type: Type.STRING }
             },
-            required: ["name", "history", "prepTime", "tricks", "ingredients", "steps", "nutrition", "chefTip"]
+            required: ["name", "history", "prepTime", "tricks", "ingredients", "steps", "nutrition", "pairing", "chefTip"]
           }
         }
       });
@@ -103,12 +112,14 @@ export async function generateRecipeText(
 
       return JSON.parse(response.text);
     } catch (error: any) {
-      const is429 = error?.message?.includes("429") || String(error).includes("429");
+      const errorStr = String(error).toLowerCase();
+      const is429 = error?.message?.includes("429") || errorStr.includes("429");
+      const is500 = error?.message?.includes("500") || errorStr.includes("500") || errorStr.includes("rpc failed");
       
-      if (is429 && retryCount < maxRetries) {
+      if ((is429 || is500) && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-        console.log(`Retrying after 429 error (attempt ${retryCount})... waiting ${delay}ms`);
+        console.log(`Retrying after ${is429 ? '429' : '500'} error (attempt ${retryCount})... waiting ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeRequest();
       }
@@ -135,22 +146,23 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
 
   const executeImageRequest = async (): Promise<string | undefined> => {
     try {
-      console.log("Solicitando imagen para:", recipeName);
-      // Usamos gemini-2.5-flash-image para mayor estabilidad
+      console.log("Solicitando imagen de alta calidad para:", recipeName);
+      // Usamos gemini-3.1-flash-image-preview para mayor calidad (requiere clave con facturación habilitada)
       const imageResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3.1-flash-image-preview",
         contents: {
           parts: [
             {
               text: `Food photography of a gourmet dish: ${recipeName}. 
                      Ingredients: ${ingredients.slice(0, 5).join(", ")}. 
-                     Style: Professional, appetizing, minimalist background, natural light.`
+                     Style: Professional, appetizing, minimalist background, natural light, high resolution.`
             }
           ]
         },
         config: {
           imageConfig: {
-            aspectRatio: "16:9"
+            aspectRatio: "16:9",
+            imageSize: "1K"
           }
         }
       });
@@ -170,13 +182,15 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
     } catch (imageError: any) {
       console.error("Error detallado en generación de imagen:", imageError);
       
-      const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
-      const isSafety = imageError?.message?.includes("SAFETY") || String(imageError).includes("SAFETY");
+      const errorStr = String(imageError).toLowerCase();
+      const is429 = imageError?.message?.includes("429") || errorStr.includes("429");
+      const is500 = imageError?.message?.includes("500") || errorStr.includes("500") || errorStr.includes("rpc failed");
+      const isSafety = imageError?.message?.includes("SAFETY") || errorStr.includes("safety");
 
-      if (is429 && retryCount < maxRetries) {
+      if ((is429 || is500) && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000;
-        console.log(`Reintentando imagen (intento ${retryCount})...`);
+        console.log(`Reintentando imagen debido a error ${is429 ? '429' : '500'} (intento ${retryCount})...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeImageRequest();
       }

@@ -1,4 +1,4 @@
-import { ChefHat, Globe, Clock, Flame, Sparkles, Bookmark, Share2, Download, RotateCcw } from 'lucide-react';
+import { ChefHat, Globe, Clock, Flame, Sparkles, Bookmark, Share2, Download, RotateCcw, Wine } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Recipe } from '../types';
 
@@ -128,15 +128,18 @@ export function RecipeView({
           </div>
         )}
         
-        <img 
-          src={recipe.imageUrl || ''} 
-          alt={recipe.name} 
-          className={cn(
-            "w-full h-full object-cover transition-opacity duration-700",
-            recipe.imageUrl ? "opacity-100" : "opacity-0"
-          )}
-          referrerPolicy="no-referrer"
-        />
+        {recipe.imageUrl ? (
+          <img 
+            src={recipe.imageUrl} 
+            alt={recipe.name} 
+            className="w-full h-full object-cover transition-opacity duration-700 opacity-100"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full bg-charcoal flex items-center justify-center">
+            {/* Placeholder is already handled by the overlay div above when no image exists */}
+          </div>
+        )}
       </div>
 
       {/* Recipe Title & Intro */}
@@ -235,6 +238,21 @@ export function RecipeView({
                 </p>
               </div>
               
+              {recipe.pairing && (
+                <div className="space-y-3 pt-4 border-t border-gold/10">
+                  <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
+                    <Wine size={18} />
+                    Maridaje Sugerido
+                  </h4>
+                  <div className="text-sm">
+                    <span className="font-bold text-charcoal block mb-1">{recipe.pairing.drink}</span>
+                    <p className="text-charcoal/70 italic leading-relaxed">
+                      {recipe.pairing.description}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {recipe.tricks && recipe.tricks.length > 0 && (
                 <div className="space-y-3 pt-4 border-t border-gold/10">
                   <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
