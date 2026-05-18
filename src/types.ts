@@ -25,10 +25,6 @@ export interface Recipe {
   };
   prepTime: string;
   tricks: string[];
-  pairing?: {
-    drink: string;
-    description: string;
-  };
   chefTip: string;
   imageUrl?: string;
   courses?: Course[];

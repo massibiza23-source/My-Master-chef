@@ -1,4 +1,4 @@
-import { ChefHat, Globe, Clock, Flame, Sparkles, Bookmark, Share2, Download, RotateCcw, Wine } from 'lucide-react';
+import { ChefHat, Globe, Clock, Flame, Sparkles, Bookmark, Share2, Download, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Recipe } from '../types';
 
@@ -238,21 +238,6 @@ export function RecipeView({
                 </p>
               </div>
               
-              {recipe.pairing && (
-                <div className="space-y-3 pt-4 border-t border-gold/10">
-                  <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
-                    <Wine size={18} />
-                    Maridaje Sugerido
-                  </h4>
-                  <div className="text-sm">
-                    <span className="font-bold text-charcoal block mb-1">{recipe.pairing.drink}</span>
-                    <p className="text-charcoal/70 italic leading-relaxed">
-                      {recipe.pairing.description}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {recipe.tricks && recipe.tricks.length > 0 && (
                 <div className="space-y-3 pt-4 border-t border-gold/10">
                   <h4 className="font-serif text-lg flex items-center gap-2 text-gold">
