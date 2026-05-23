@@ -327,9 +327,11 @@ export default function App() {
   };
 
   const ingredientSuggestions = [
-    { category: 'Proteínas', items: ['Pollo', 'Ternera', 'Salmón', 'Tofu', 'Gambas'] },
-    { category: 'Vegetales', items: ['Cebolla', 'Ajo', 'Tomate', 'Brócoli', 'Espinacas'] },
-    { category: 'Despensa', items: ['Arroz', 'Pasta', 'Miel', 'Aceite de Oliva', 'Salsa de Soja'] }
+    { category: 'Proteínas', items: ['Pollo', 'Ternera', 'Lomo de Cerdo', 'Salmón', 'Atún', 'Huevo', 'Tofu', 'Gambas'] },
+    { category: 'Legumbres & Cereales', items: ['Lentejas', 'Garbanzos', 'Alubias', 'Quinoa', 'Arroz integral', 'Cuscús', 'Avena'] },
+    { category: 'Vegetales & Frutas', items: ['Cebolla', 'Ajo', 'Tomate', 'Brócoli', 'Espinacas', 'Zanahoria', 'Pimiento', 'Aguacate', 'Limón', 'Calabacín'] },
+    { category: 'Hierbas & Especias', items: ['Orégano', 'Comino', 'Curry', 'Pimentón', 'Cilantro', 'Albahaca', 'Jengibre', 'Romero', 'Canela', 'Cúrcuma'] },
+    { category: 'Lácteos & Despensa', items: ['Aceite de Oliva', 'Salsa de Soja', 'Leche de Coco', 'Miel', 'Queso Parmesano', 'Yogur Griego', 'Pasta', 'Mantequilla'] }
   ];
 
   const addSuggestedIngredient = (item: string) => {
