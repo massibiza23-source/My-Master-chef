@@ -35,10 +35,7 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Ensure we only load valid recipe objects and limit to 50
-        return (Array.isArray(parsed) ? parsed : [])
-          .filter(r => r && typeof r === 'object' && r.name)
-          .slice(0, 50);
+        return Array.isArray(parsed) ? parsed.filter(r => r && typeof r === 'object' && r.name) : [];
       } catch (e) {
         console.error("Error parsing saved recipes", e);
         return [];
@@ -109,38 +106,10 @@ export default function App() {
   ] as const;
 
   useEffect(() => {
-    const saveWithQuotaCheck = (recipes: Recipe[]) => {
-      try {
-        localStorage.setItem('flavor_engine_recipes', JSON.stringify(recipes));
-      } catch (e: any) {
-        // QuotaExceededError check (code 22 for Chrome/Firefox/Safari, 1014 for legacy)
-        if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
-          console.warn("LocalStorage limit reached. Stripping images from older recipes to save space.");
-          
-          // Keep images only for the 3 most recent recipes
-          const reducedRecipes = recipes.map((r, idx) => {
-            if (idx > 2 && r.imageUrl?.startsWith('data:')) {
-              return { ...r, imageUrl: undefined };
-            }
-            return r;
-          });
-
-          try {
-            localStorage.setItem('flavor_engine_recipes', JSON.stringify(reducedRecipes));
-            // We don't necessarily need to update state immediately to avoid loop, 
-            // but the next time state changes it will be "synced" with this reduced version.
-          } catch (innerError) {
-            console.error("Storage still full. Discarding oldest recipes.");
-            localStorage.setItem('flavor_engine_recipes', JSON.stringify(recipes.slice(0, 5)));
-          }
-        } else {
-          console.error("Error saving to localStorage", e);
-        }
-      }
-    };
-
-    if (savedRecipes.length > 0) {
-      saveWithQuotaCheck(savedRecipes);
+    try {
+      localStorage.setItem('flavor_engine_recipes', JSON.stringify(savedRecipes));
+    } catch (e: any) {
+      console.error("Error saving to localStorage", e);
     }
   }, [savedRecipes]);
 
@@ -205,8 +174,7 @@ export default function App() {
   const saveRecipe = () => {
     if (recipe && recipe.name) {
       if (!savedRecipes.some(r => r.name === recipe.name)) {
-        // Limit total saved recipes to 50
-        setSavedRecipes(prev => [recipe, ...prev].slice(0, 50));
+        setSavedRecipes([recipe, ...savedRecipes]);
         setShowSaveFeedback('saved');
         setTimeout(() => setShowSaveFeedback(null), 3000);
       } else {
@@ -327,11 +295,9 @@ export default function App() {
   };
 
   const ingredientSuggestions = [
-    { category: 'Proteínas', items: ['Pollo', 'Ternera', 'Lomo de Cerdo', 'Salmón', 'Atún', 'Huevo', 'Tofu', 'Gambas'] },
-    { category: 'Legumbres & Cereales', items: ['Lentejas', 'Garbanzos', 'Alubias', 'Quinoa', 'Arroz integral', 'Cuscús', 'Avena'] },
-    { category: 'Vegetales & Frutas', items: ['Cebolla', 'Ajo', 'Tomate', 'Brócoli', 'Espinacas', 'Zanahoria', 'Pimiento', 'Aguacate', 'Limón', 'Calabacín'] },
-    { category: 'Hierbas & Especias', items: ['Orégano', 'Comino', 'Curry', 'Pimentón', 'Cilantro', 'Albahaca', 'Jengibre', 'Romero', 'Canela', 'Cúrcuma'] },
-    { category: 'Lácteos & Despensa', items: ['Aceite de Oliva', 'Salsa de Soja', 'Leche de Coco', 'Miel', 'Queso Parmesano', 'Yogur Griego', 'Pasta', 'Mantequilla'] }
+    { category: 'Proteínas', items: ['Pollo', 'Ternera', 'Salmón', 'Tofu', 'Gambas'] },
+    { category: 'Vegetales', items: ['Cebolla', 'Ajo', 'Tomate', 'Brócoli', 'Espinacas'] },
+    { category: 'Despensa', items: ['Arroz', 'Pasta', 'Miel', 'Aceite de Oliva', 'Salsa de Soja'] }
   ];
 
   const addSuggestedIngredient = (item: string) => {

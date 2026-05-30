@@ -128,18 +128,15 @@ export function RecipeView({
           </div>
         )}
         
-        {recipe.imageUrl ? (
-          <img 
-            src={recipe.imageUrl} 
-            alt={recipe.name} 
-            className="w-full h-full object-cover transition-opacity duration-700 opacity-100"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className="w-full h-full bg-charcoal flex items-center justify-center">
-            {/* Placeholder is already handled by the overlay div above when no image exists */}
-          </div>
-        )}
+        <img 
+          src={recipe.imageUrl || ''} 
+          alt={recipe.name} 
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-700",
+            recipe.imageUrl ? "opacity-100" : "opacity-0"
+          )}
+          referrerPolicy="no-referrer"
+        />
       </div>
 
       {/* Recipe Title & Intro */}

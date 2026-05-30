@@ -36,7 +36,7 @@ export async function generateRecipeText(
   const executeRequest = async (): Promise<Recipe> => {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
           systemInstruction: "Eres un Chef Ejecutivo de alta cocina. Tu objetivo es crear recetas innovadoras y equilibradas. Sé profesional, claro y eficiente en tus explicaciones.",
@@ -103,14 +103,12 @@ export async function generateRecipeText(
 
       return JSON.parse(response.text);
     } catch (error: any) {
-      const errorStr = String(error).toLowerCase();
-      const is429 = error?.message?.includes("429") || errorStr.includes("429");
-      const is500 = error?.message?.includes("500") || errorStr.includes("500") || errorStr.includes("rpc failed");
+      const is429 = error?.message?.includes("429") || String(error).includes("429");
       
-      if ((is429 || is500) && retryCount < maxRetries) {
+      if (is429 && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-        console.log(`Retrying after ${is429 ? '429' : '500'} error (attempt ${retryCount})... waiting ${delay}ms`);
+        console.log(`Retrying after 429 error (attempt ${retryCount})... waiting ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeRequest();
       }
@@ -172,15 +170,13 @@ export async function generateRecipeImage(recipeName: string, ingredients: strin
     } catch (imageError: any) {
       console.error("Error detallado en generación de imagen:", imageError);
       
-      const errorStr = String(imageError).toLowerCase();
-      const is429 = imageError?.message?.includes("429") || errorStr.includes("429");
-      const is500 = imageError?.message?.includes("500") || errorStr.includes("500") || errorStr.includes("rpc failed");
-      const isSafety = imageError?.message?.includes("SAFETY") || errorStr.includes("safety");
+      const is429 = imageError?.message?.includes("429") || String(imageError).includes("429");
+      const isSafety = imageError?.message?.includes("SAFETY") || String(imageError).includes("SAFETY");
 
-      if ((is429 || is500) && retryCount < maxRetries) {
+      if (is429 && retryCount < maxRetries) {
         retryCount++;
         const delay = Math.pow(2, retryCount) * 1000;
-        console.log(`Reintentando imagen debido a error ${is429 ? '429' : '500'} (intento ${retryCount})...`);
+        console.log(`Reintentando imagen (intento ${retryCount})...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeImageRequest();
       }
