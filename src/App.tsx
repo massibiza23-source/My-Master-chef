@@ -295,9 +295,12 @@ export default function App() {
   };
 
   const ingredientSuggestions = [
-    { category: 'Proteínas', items: ['Pollo', 'Ternera', 'Salmón', 'Tofu', 'Gambas'] },
-    { category: 'Vegetales', items: ['Cebolla', 'Ajo', 'Tomate', 'Brócoli', 'Espinacas'] },
-    { category: 'Despensa', items: ['Arroz', 'Pasta', 'Miel', 'Aceite de Oliva', 'Salsa de Soja'] }
+    { category: 'Carnes', items: ['Pollo', 'Ternera', 'Cerdo', 'Cordero', 'Pavo', 'Jamón', 'Chorizo'] },
+    { category: 'Pescados y Mariscos', items: ['Salmón', 'Atún', 'Bacalao', 'Merluza', 'Gambas', 'Calamar', 'Pulpo'] },
+    { category: 'Verduras y Vegetales', items: ['Cebolla', 'Ajo', 'Tomate', 'Brócoli', 'Espinacas', 'Zanahoria', 'Calabacín', 'Berenjena', 'Pimiento', 'Patata', 'Aguacate', 'Champiñones'] },
+    { category: 'Frutas', items: ['Manzana', 'Limón', 'Naranja', 'Plátano', 'Fresa', 'Mango', 'Piña', 'Coco'] },
+    { category: 'Especias y Hierbas', items: ['Sal', 'Pimienta', 'Orégano', 'Comino', 'Cúrcuma', 'Curry', 'Pimentón', 'Canela', 'Romero', 'Albahaca', 'Cilantro', 'Jengibre'] },
+    { category: 'Despensa y Líquidos', items: ['Arroz', 'Pasta', 'Leche de Coco', 'Miel', 'Aceite de Oliva', 'Salsa de Soja', 'Huevo', 'Queso', 'Yogur', 'Harina'] }
   ];
 
   const addSuggestedIngredient = (item: string) => {
